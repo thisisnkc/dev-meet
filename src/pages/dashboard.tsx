@@ -20,6 +20,7 @@ interface Stats {
 }
 
 import DashboardLayout from "@/components/DashboardLayout";
+import { genRandomMeetingId } from "@/utlis/constants";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -77,7 +78,6 @@ export default function DashboardPage() {
     setTimeout(() => setCopySuccess(false), 2000);
   };
 
-  // Handler to add a new meeting
   const handleCreateMeeting = async (data: { title: string; date: string }) => {
     const newMeeting: Meeting = {
       id: Date.now().toString(),
@@ -86,6 +86,15 @@ export default function DashboardPage() {
       attendees: 0,
     };
     setMeetings((prev) => [newMeeting, ...prev]);
+  };
+
+  const joinMeeting = () => {
+    const meetingId = genRandomMeetingId();
+    const meetingUrl = `/meeting/${meetingId}`;
+
+    const fullUrl = `${window.location.origin}${meetingUrl}`;
+
+    window.open(fullUrl, "_blank");
   };
 
   return (
@@ -161,7 +170,7 @@ export default function DashboardPage() {
                       {meeting.attendees !== 1 && "s"}
                     </p>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={joinMeeting}>
                         Join
                       </Button>
                       <Button variant="secondary" size="sm">
