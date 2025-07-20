@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { Loader2Icon } from "lucide-react";
 
 import {
   Card,
@@ -13,17 +14,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { avatarOptions } from "@/utlis/constants";
 
 export default function RegisterPage() {
   const router = useRouter();
-
-  const avatarOptions: string[] = [
-    "https://randomuser.me/api/portraits/women/44.jpg",
-    "https://randomuser.me/api/portraits/men/32.jpg",
-    "https://randomuser.me/api/portraits/men/75.jpg",
-    "https://randomuser.me/api/portraits/women/68.jpg",
-    "https://randomuser.me/api/portraits/men/86.jpg",
-  ];
 
   const [form, setForm] = useState({
     name: "",
@@ -32,6 +26,8 @@ export default function RegisterPage() {
     confirmPassword: "",
     avatar: avatarOptions[0],
   });
+
+  const [loading, setLoading] = useState(false);
 
   const [errors, setErrors] = useState<Partial<typeof form>>({});
 
@@ -56,12 +52,32 @@ export default function RegisterPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
+    try {
+      setLoading(true);
 
-    // Replace with actual backend call
-    console.log("Submitted:", form);
-    router.push("/login");
+      e.preventDefault();
+      if (!validate()) return;
+
+      const avatarIndex = avatarOptions.indexOf(form.avatar);
+
+      const response = await fetch("/api/users/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ...form, avatar: avatarIndex }),
+      });
+
+      if (response.status == 201) {
+        router.push("/login");
+      } else {
+        console.error("Registration failed:", response);
+      }
+    } catch (error) {
+      console.error("Registration failed:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -170,7 +186,7 @@ export default function RegisterPage() {
               </div>
 
               <Button type="submit" className="w-full mt-2">
-                Sign Up
+                {loading ? <Loader2Icon className="animate-spin" /> : "Sign Up"}
               </Button>
 
               <p className="text-sm text-center text-muted-foreground mt-3">

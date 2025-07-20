@@ -12,15 +12,27 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { emailAtom, passwordAtom } from "@/state/atoms";
+import { avatarAtom, emailAtom, nameAtom, passwordAtom } from "@/state/atoms";
+import { useRouter } from "next/router";
+// import { useToast } from "@/components/ui/toast"; // <-- Add this
+import { Loader2Icon } from "lucide-react";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const [email, setEmail] = useAtom(emailAtom);
+  const [, setName] = useAtom(nameAtom);
+  const [, setAvatar] = useAtom(avatarAtom);
   const [password, setPassword] = useAtom(passwordAtom);
+
   const [formErrors, setFormErrors] = useState<{
     email?: string;
     password?: string;
   }>({});
+
+  const [loading, setLoading] = useState(false);
+
+  const router = useRouter();
+  // const { showToast } = useToast();
 
   const validate = () => {
     const errors: typeof formErrors = {};
@@ -41,12 +53,54 @@ export default function LoginPage() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    try {
+      setLoading(true);
+      e.preventDefault();
+      if (!validate()) return;
 
-    console.log("Logging in with:", { email, password });
-    // proceed with API call
+      const response = await fetch("/api/users/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.status !== 200) {
+        toast("Invalid email or password.", {
+          closeButton: true,
+          description: "Please try again.",
+          duration: 5000,
+          style: {
+            color: "red",
+          },
+        });
+        console.error("Login failed:", response);
+        return;
+      } else {
+        const data = await response.json();
+        setName(data.user.name);
+        setAvatar(data.user.avatar);
+        toast("Login successful!");
+        router.push("/dashboard");
+
+        const user = {
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          avatar: data.user.avatar,
+        };
+
+        localStorage.setItem("user", JSON.stringify(user));
+      }
+
+      // proceed with API call
+    } catch {
+      toast("An error occurred during login.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -105,7 +159,11 @@ export default function LoginPage() {
               </div>
 
               <Button type="submit" className="w-full mt-2">
-                Login
+                {loading ? (
+                  <Loader2Icon className="animate-spin" />
+                ) : (
+                  "Login In"
+                )}
               </Button>
 
               <p className="text-sm text-center text-muted-foreground mt-4">

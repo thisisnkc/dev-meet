@@ -1,16 +1,24 @@
 // src/pages/dashboard.tsx
 import { useEffect, useState } from "react";
-import { useRouter } from "next/router";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Copy, Share2, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AddMeetingModal from "@/components/AddMeetingModal";
 
+interface Attendee {
+  id: string;
+  email: string;
+}
+
 interface Meeting {
   id: string;
   title: string;
   date: string; // ISO format
-  attendees: number;
+  from: string;
+  to: string;
+  description?: string;
+  attendees: Attendee[];
 }
 
 interface Stats {
@@ -19,56 +27,53 @@ interface Stats {
   attendees: number;
 }
 
-import DashboardLayout from "@/components/DashboardLayout";
-import { genRandomMeetingId } from "@/utlis/constants";
-
 export default function DashboardPage() {
-  const router = useRouter();
   const [bookingUrl, setBookingUrl] = useState("");
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats>({
     meetings: 0,
     slotsFilled: 0,
     attendees: 0,
   });
-  const [loading, setLoading] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  // Modal state
 
   useEffect(() => {
     async function fetchDashboardData() {
       setLoading(true);
+      setError(null);
       try {
-        const fetchedMeetings: Meeting[] = [
-          {
-            id: "1",
-            title: "Tech Discussion",
-            date: "2025-07-19T15:00:00",
-            attendees: 3,
-          },
-          {
-            id: "2",
-            title: "Product Demo",
-            date: "2025-07-22T11:00:00",
-            attendees: 1,
-          },
-        ];
-        const fetchedStats = {
-          meetings: 12,
-          slotsFilled: 7,
-          attendees: 28,
-        };
-        const userBookingUrl = "https://devmeet.com/book/nikhil123";
-
-        setMeetings(fetchedMeetings);
-        setStats(fetchedStats);
-        setBookingUrl(userBookingUrl);
+        const userStr = localStorage.getItem("user");
+        if (!userStr) throw new Error("User not found");
+        const user = JSON.parse(userStr);
+        const res = await fetch(`/api/bookings?userId=${user.id}`);
+        if (!res.ok) throw new Error("Failed to fetch meetings");
+        const data = await res.json();
+        // API returns { meetings: Meeting[] }
+        setMeetings(data.meetings || []);
+        setStats({
+          meetings: data.meetings?.length || 0,
+          slotsFilled:
+            data.meetings?.reduce(
+              (sum: number, m: Meeting) => sum + (m.attendees?.length || 0),
+              0
+            ) || 0,
+          attendees:
+            data.meetings?.reduce(
+              (sum: number, m: Meeting) => sum + (m.attendees?.length || 0),
+              0
+            ) || 0,
+        });
+        setBookingUrl(`https://devmeet.com/book/${user.email?.split("@")[0]}`);
+      } catch (err) {
+        if (err instanceof Error) setError(err.message);
+        else setError("Unknown error");
       } finally {
         setLoading(false);
       }
     }
-
     fetchDashboardData();
   }, []);
 
@@ -78,14 +83,54 @@ export default function DashboardPage() {
     setTimeout(() => setCopySuccess(false), 2000);
   };
 
-  const handleCreateMeeting = async (data: { title: string; date: string }) => {
-    const newMeeting: Meeting = {
-      id: Date.now().toString(),
-      title: data.title,
-      date: new Date(data.date).toISOString(),
-      attendees: 0,
-    };
-    setMeetings((prev) => [newMeeting, ...prev]);
+  const handleCreateMeeting = async (data: {
+    title: string;
+    date: string;
+    from: string;
+    to: string;
+    description?: string;
+    attendees: string[];
+  }) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) throw new Error("User not found");
+      const user = JSON.parse(userStr);
+      const res = await fetch("/api/bookings/index", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user.id,
+        },
+        body: JSON.stringify({
+          title: data.title,
+          date: data.date,
+          from: data.from,
+          to: data.to,
+          description: data.description,
+          attendeeEmails: data.attendees,
+        }),
+      });
+      if (!res.ok) {
+        const msg = (await res.json()).message || "Failed to create meeting";
+        throw new Error(msg);
+      }
+      const result = await res.json();
+      setMeetings((prev) => [result.bookings, ...prev]);
+      setStats((prev) => ({
+        ...prev,
+        meetings: prev.meetings + 1,
+        slotsFilled:
+          prev.slotsFilled + (result.bookings.attendees?.length || 0),
+        attendees: prev.attendees + (result.bookings.attendees?.length || 0),
+      }));
+    } catch (err) {
+      if (err instanceof Error) setError(err.message);
+      else setError("Unknown error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const joinMeeting = () => {
@@ -98,17 +143,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <DashboardLayout
-      user={{
-        name: "Nikhil",
-        email: "nikhil@example.com",
-        avatarUrl: "https://randomuser.me/api/portraits/men/32.jpg",
-      }}
-      onLogout={() => {
-        // TODO: Implement logout logic
-        window.location.href = "/login";
-      }}
-    >
+    <DashboardLayout>
       {/* Main dashboard content starts here */}
       <div className="space-y-10">
         <Card>
@@ -150,6 +185,8 @@ export default function DashboardPage() {
           </h2>
           {loading ? (
             <p className="text-muted-foreground">Loading meetings...</p>
+          ) : error ? (
+            <p className="text-red-500">{error}</p>
           ) : meetings.length === 0 ? (
             <p className="text-muted-foreground">No upcoming meetings.</p>
           ) : (
@@ -158,7 +195,8 @@ export default function DashboardPage() {
                 <Card key={meeting.id} className="border border-slate-200">
                   <CardHeader>
                     <CardTitle className="text-md font-medium">
-                      📆 {new Date(meeting.date).toLocaleString()}
+                      📆 {new Date(meeting.date).toLocaleString()} (
+                      {meeting.from} - {meeting.to})
                     </CardTitle>
                     <p className="text-sm text-muted-foreground">
                       {meeting.title}
@@ -166,8 +204,8 @@ export default function DashboardPage() {
                   </CardHeader>
                   <CardContent className="flex justify-between items-center">
                     <p className="text-sm text-muted-foreground">
-                      👥 {meeting.attendees} Attendee
-                      {meeting.attendees !== 1 && "s"}
+                      👥 {meeting.attendees?.length || 0} Attendee
+                      {meeting.attendees?.length !== 1 ? "s" : ""}
                     </p>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={joinMeeting}>

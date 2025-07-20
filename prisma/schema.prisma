@@ -1,0 +1,48 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String    @id @default(uuid())
+  name       String
+  email      String    @unique
+  password   String
+  avatar     Int
+  createdAt  DateTime  @default(now())
+  bookings   Booking[] // Bookings created by the user
+}
+
+model Booking {
+  id          String      @id @default(uuid())
+  title       String
+  date        DateTime
+  from        String      // HH:MM format
+  to          String      // HH:MM format
+  description String?
+  createdAt   DateTime    @default(now())
+
+  organizerId String
+  organizer   User        @relation(fields: [organizerId], references: [id])
+
+  attendees   Attendee[]
+}
+
+model Attendee {
+  id         String   @id @default(uuid())
+  email      String
+  notified   Boolean  @default(false)
+
+  bookingId  String
+  booking    Booking  @relation(fields: [bookingId], references: [id])
+
+  createdAt  DateTime @default(now())
+
+  @@unique([bookingId, email]) // Prevent duplicate emails in one booking
+}

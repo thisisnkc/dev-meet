@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import {
@@ -29,7 +28,6 @@ interface AddMeetingModalProps {
     to: string;
     description?: string;
     attendees: string[];
-    notifyAttendees: boolean;
   }) => Promise<void> | void;
   loading?: boolean;
 }
@@ -47,7 +45,6 @@ export default function AddMeetingModal({
     to: "",
     description: "",
     attendees: [] as string[],
-    notifyAttendees: false,
   });
 
   // State for chip input
@@ -88,11 +85,17 @@ export default function AddMeetingModal({
   }
 
   // Handle input key down
-  function handleAttendeeInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function handleAttendeeInputKeyDown(
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) {
     if (["Enter", ",", "Tab"].includes(e.key)) {
       e.preventDefault();
       addEmailChip(attendeeInput);
-    } else if (e.key === "Backspace" && attendeeInput === "" && emails.length > 0) {
+    } else if (
+      e.key === "Backspace" &&
+      attendeeInput === "" &&
+      emails.length > 0
+    ) {
       removeEmail(emails.length - 1);
     }
   }
@@ -144,7 +147,6 @@ export default function AddMeetingModal({
       to: formData.to,
       description: formData.description || "",
       attendees: emails,
-      notifyAttendees: formData.notifyAttendees,
     });
 
     setSuccess(true);
@@ -155,7 +157,6 @@ export default function AddMeetingModal({
       to: "",
       description: "",
       attendees: [],
-      notifyAttendees: false,
     });
     setEmails([]);
     setAttendeeInput("");
@@ -269,13 +270,19 @@ export default function AddMeetingModal({
           <div>
             <Label htmlFor="attendees">Attendee Emails</Label>
             <div
-              className={`flex flex-wrap items-center gap-2 px-2 py-2 min-h-[44px] border rounded-lg bg-slate-50 focus-within:ring-2 focus-within:ring-indigo-500 transition-shadow ${formErrors.attendees ? "border-red-500" : "border-slate-300"}`}
+              className={`flex flex-wrap items-center gap-2 px-2 py-2 min-h-[44px] border rounded-lg bg-slate-50 focus-within:ring-2 focus-within:ring-indigo-500 transition-shadow ${
+                formErrors.attendees ? "border-red-500" : "border-slate-300"
+              }`}
               onClick={() => emailInputRef.current?.focus()}
             >
               {emails.map((email, idx) => (
                 <span
                   key={email + idx}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${isValidEmail(email) ? "bg-indigo-100 text-indigo-800" : "bg-red-100 text-red-700"}`}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                    isValidEmail(email)
+                      ? "bg-indigo-100 text-indigo-800"
+                      : "bg-red-100 text-red-700"
+                  }`}
                 >
                   {email}
                   <button
@@ -295,7 +302,11 @@ export default function AddMeetingModal({
                 value={attendeeInput}
                 onChange={handleAttendeeInputChange}
                 onKeyDown={handleAttendeeInputKeyDown}
-                placeholder={emails.length === 0 ? "Type email and press Enter" : "Add more..."}
+                placeholder={
+                  emails.length === 0
+                    ? "Type email and press Enter"
+                    : "Add more..."
+                }
                 className="flex-1 border-none bg-transparent outline-none py-1 min-w-[120px] text-sm"
                 disabled={loading}
                 autoComplete="off"
@@ -305,23 +316,33 @@ export default function AddMeetingModal({
               {emails.length} attendee{emails.length !== 1 ? "s" : ""}
             </div>
             {formErrors.attendees && (
-              <p className="text-sm text-red-500 mt-1">{formErrors.attendees}</p>
+              <p className="text-sm text-red-500 mt-1">
+                {formErrors.attendees}
+              </p>
             )}
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="notify"
-              checked={formData.notifyAttendees}
-              onCheckedChange={(checked) =>
-                setFormData((f) => ({ ...f, notifyAttendees: !!checked }))
-              }
-              disabled={loading}
-            />
-            <Label htmlFor="notify">
-              Notify attendees / send calendar invite
-            </Label>
-          </div>
+          {emails.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <div className="w-full bg-indigo-50 text-indigo-700 text-sm rounded-md px-3 py-2 flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 text-indigo-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M12 20c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8z"
+                  />
+                </svg>
+                Attendees will be notified via email or calendar invite.
+              </div>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="description">Description (optional)</Label>
