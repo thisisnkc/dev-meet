@@ -5,6 +5,9 @@ import { Copy, Share2, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AddMeetingModal from "@/components/AddMeetingModal";
+import { useRouter } from "next/router";
+import { toast } from "sonner";
+import { joinMeeting } from "@/utlis/constants";
 
 interface Attendee {
   id: string;
@@ -21,7 +24,7 @@ interface Meeting {
   attendees: Attendee[];
 }
 
-interface Stats {
+export interface Stats {
   meetings: number;
   slotsFilled: number;
   attendees: number;
@@ -39,6 +42,8 @@ export default function DashboardPage() {
   });
   const [copySuccess, setCopySuccess] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -66,6 +71,8 @@ export default function DashboardPage() {
               0
             ) || 0,
         });
+
+        //TODO: need to figure out if this is needed or not
         setBookingUrl(`https://devmeet.com/book/${user.email?.split("@")[0]}`);
       } catch (err) {
         if (err instanceof Error) setError(err.message);
@@ -97,7 +104,7 @@ export default function DashboardPage() {
       const userStr = localStorage.getItem("user");
       if (!userStr) throw new Error("User not found");
       const user = JSON.parse(userStr);
-      const res = await fetch("/api/bookings/index", {
+      const res = await fetch("/api/bookings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -117,29 +124,25 @@ export default function DashboardPage() {
         throw new Error(msg);
       }
       const result = await res.json();
-      setMeetings((prev) => [result.bookings, ...prev]);
+      setMeetings((prev) => [result.booking, ...prev]);
       setStats((prev) => ({
         ...prev,
         meetings: prev.meetings + 1,
-        slotsFilled:
-          prev.slotsFilled + (result.bookings.attendees?.length || 0),
-        attendees: prev.attendees + (result.bookings.attendees?.length || 0),
+        slotsFilled: prev.slotsFilled + (result.booking.attendees?.length || 0),
+        attendees: prev.attendees + (result.booking.attendees?.length || 0),
       }));
+
+      toast.info("Meeting created successfully", {
+        description:
+          "You will receive a reminder notification 10 minutes before the meeting starts.",
+        duration: 10000,
+      });
     } catch (err) {
       if (err instanceof Error) setError(err.message);
       else setError("Unknown error");
     } finally {
       setLoading(false);
     }
-  };
-
-  const joinMeeting = () => {
-    const meetingId = genRandomMeetingId();
-    const meetingUrl = `/meeting/${meetingId}`;
-
-    const fullUrl = `${window.location.origin}${meetingUrl}`;
-
-    window.open(fullUrl, "_blank");
   };
 
   return (
@@ -155,11 +158,7 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex gap-2 mt-3 sm:mt-0">
-              <Button
-                variant="outline"
-                onClick={handleCopy}
-                disabled={!bookingUrl}
-              >
+              <Button onClick={handleCopy} disabled={!bookingUrl}>
                 <Copy className="w-4 h-4 mr-1" />
                 {copySuccess ? "Copied" : "Copy"}
               </Button>
@@ -176,7 +175,8 @@ export default function DashboardPage() {
             <PlusCircle className="w-4 h-4 mr-2" />
             Create New Meeting
           </Button>
-          <Button variant="secondary">Manage Availability</Button>
+          {/* //TODO: need to figure out if this is needed or not */}
+          <Button variant="outline">Manage Availability</Button>
         </div>
 
         <section>
@@ -195,7 +195,7 @@ export default function DashboardPage() {
                 <Card key={meeting.id} className="border border-slate-200">
                   <CardHeader>
                     <CardTitle className="text-md font-medium">
-                      📆 {new Date(meeting.date).toLocaleString()} (
+                      {meeting.date.toLocaleString().split("T")[0]} (
                       {meeting.from} - {meeting.to})
                     </CardTitle>
                     <p className="text-sm text-muted-foreground">
@@ -208,10 +208,18 @@ export default function DashboardPage() {
                       {meeting.attendees?.length !== 1 ? "s" : ""}
                     </p>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={joinMeeting}>
+                      <Button size="sm" onClick={() => joinMeeting()}>
                         Join
                       </Button>
-                      <Button variant="secondary" size="sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          router.push(
+                            `/calendar?date=${meeting.date.split("T")[0]}`
+                          )
+                        }
+                      >
                         Details
                       </Button>
                     </div>
@@ -255,7 +263,6 @@ export default function DashboardPage() {
         </section>
       </div>
 
-      {/* Create Meeting Modal */}
       <AddMeetingModal
         open={modalOpen}
         onOpenChange={setModalOpen}

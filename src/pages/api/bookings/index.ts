@@ -1,5 +1,8 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { PrismaClient } from "@prisma/client";
+import { genRandomMeetingId, genSixDigitOtp } from "@/utlis/constants";
+import { notificationQueue } from "@/queue/notificationQueue";
+import moment from "moment-timezone";
 
 const prisma = new PrismaClient();
 
@@ -12,6 +15,19 @@ export default async function handler(
       const { title, date, from, to, description, attendeeEmails } = req.body;
 
       const userId = req.headers["x-user-id"] as string;
+
+      const user = await prisma.user.findUnique({
+        where: {
+          id: userId,
+        },
+        select: {
+          email: true,
+        },
+      });
+
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
 
       if (!userId || !title || !date || !from || !to) {
         return res.status(400).json({ message: "Missing required fields." });
@@ -30,13 +46,18 @@ export default async function handler(
       if (existing) {
         return res.status(409).json({ message: "Booking already exists." });
       }
+      const meetingId = genRandomMeetingId();
 
-      const bookings = await prisma.booking.create({
+      const meetingPin = genSixDigitOtp();
+
+      const booking = await prisma.booking.create({
         data: {
           title,
           date: new Date(date),
           from,
           to,
+          meetingId,
+          meetingPin,
           description,
           organizerId: userId,
           attendees: {
@@ -50,7 +71,41 @@ export default async function handler(
         },
       });
 
-      return res.status(201).json({ message: "Bookings created", bookings });
+      const scheduledDateTime = moment.tz(`${date}T${from}`, "Asia/Kolkata");
+      const notifyAt = scheduledDateTime.clone().subtract(10, "minutes");
+      const delay = Math.max(notifyAt.diff(moment()), 0);
+
+      if (delay > 0) {
+        await notificationQueue.add(
+          "notify-user",
+          {
+            userId,
+            title,
+            date,
+            from,
+            to,
+          },
+          {
+            delay,
+            attempts: 3,
+            removeOnComplete: true,
+          }
+        );
+      }
+
+      // await sendMeetingInvites({
+      //   title,
+      //   date,
+      //   from,
+      //   to,
+      //   description,
+      //   organizerEmail: user.email,
+      //   attendees: attendeeEmails,
+      //   meetingId,
+      //   meetingPin,
+      // });
+
+      return res.status(201).json({ message: "Booking created", booking });
     }
 
     if (req.method === "GET") {

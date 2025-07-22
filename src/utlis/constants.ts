@@ -9,3 +9,16 @@ export const avatarOptions: string[] = [
   "https://randomuser.me/api/portraits/women/68.jpg",
   "https://randomuser.me/api/portraits/men/86.jpg",
 ];
+
+export const genSixDigitOtp = () => {
+  return Math.floor(100000 + Math.random() * 900000);
+};
+
+export const joinMeeting = (meetingId?: string) => {
+  if (!meetingId) meetingId = genRandomMeetingId();
+  const meetingUrl = `/meeting/${meetingId}`;
+
+  const fullUrl = `${window.location.origin}${meetingUrl}`;
+
+  window.open(fullUrl, "_blank");
+};

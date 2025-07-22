@@ -26,8 +26,6 @@ body {
   }
 }
 
-
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -84,8 +82,6 @@ body {
   }
 }
 
-
-
 @layer base {
   * {
     @apply border-border;
@@ -94,3 +90,12 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* @keyframes flash {
+  0%, 100% { background: white; }
+  50% { background: #ffeaa7; }
+}
+
+html.flash-notify {
+  animation: flash 0.8s ease-in-out;
+} */
