@@ -20,7 +20,6 @@ CREATE TABLE "Booking" (
     "description" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "meetingId" TEXT NOT NULL,
-    "meetingPin" INTEGER NOT NULL,
     "organizerId" TEXT NOT NULL,
 
     CONSTRAINT "Booking_pkey" PRIMARY KEY ("id")
@@ -31,6 +30,7 @@ CREATE TABLE "Attendee" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "notified" BOOLEAN NOT NULL DEFAULT false,
+    "meetingPin" INTEGER NOT NULL,
     "bookingId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 

@@ -4,6 +4,7 @@ import { Server as SocketIOServer } from "socket.io";
 import type { NextApiRequest } from "next";
 import { NextApiResponseServerIO } from "@/types/next";
 import debug from "debug";
+import { redis } from "@/lib/redis";
 
 export const config = {
   api: {
@@ -40,6 +41,23 @@ export default function handler(
 
       socket.on("disconnect", () => {
         debugLogger("Client disconnected", socket.id);
+      });
+
+      socket.on("host-join", (meetingId: string, userId: string) => {
+        socket.join(meetingId);
+
+        redis.set(`meeting:${meetingId}:host`, userId, "EX", 60 * 60 * 24);
+
+        socket.emit("host-joined", meetingId);
+        debugLogger(`Host joined meeting ${meetingId}`);
+      });
+
+      socket.on("attendee-join", (meetingId: string, userId: string) => {
+        socket.join(meetingId);
+
+        redis.set(`meeting:${meetingId}:attendee`, userId, "EX", 60 * 60 * 24);
+
+        debugLogger(`Attendee joined meeting ${meetingId}`);
       });
     });
 

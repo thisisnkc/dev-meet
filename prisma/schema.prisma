@@ -29,7 +29,6 @@ model Booking {
   description String?
   createdAt   DateTime    @default(now())
   meetingId   String      @unique
-  meetingPin  Int
 
   organizerId String
   organizer   User        @relation(fields: [organizerId], references: [id])
@@ -41,6 +40,7 @@ model Attendee {
   id         String   @id @default(uuid())
   email      String
   notified   Boolean  @default(false)
+  meetingPin  Int
 
   bookingId  String
   booking    Booking  @relation(fields: [bookingId], references: [id])

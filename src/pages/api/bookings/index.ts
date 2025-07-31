@@ -48,8 +48,6 @@ export default async function handler(
       }
       const meetingId = genRandomMeetingId();
 
-      const meetingPin = genSixDigitOtp();
-
       const booking = await prisma.booking.create({
         data: {
           title,
@@ -57,11 +55,11 @@ export default async function handler(
           from,
           to,
           meetingId,
-          meetingPin,
           description,
           organizerId: userId,
           attendees: {
             create: attendeeEmails.map((email: string) => ({
+              meetingPin: genSixDigitOtp(),
               email,
             })),
           },
@@ -84,6 +82,7 @@ export default async function handler(
             date,
             from,
             to,
+            meetingId,
           },
           {
             delay,

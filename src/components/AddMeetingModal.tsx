@@ -103,7 +103,6 @@ export default function AddMeetingModal({
   const [formErrors, setFormErrors] = useState<
     Partial<Record<keyof typeof formData, string>>
   >({});
-  const [success, setSuccess] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -125,7 +124,6 @@ export default function AddMeetingModal({
 
       setTimeout(() => titleRef.current?.focus(), 100);
       setFormErrors({});
-      setSuccess(false);
     }
   }, [open]);
 
@@ -149,7 +147,6 @@ export default function AddMeetingModal({
       attendees: emails,
     });
 
-    setSuccess(true);
     setFormData({
       title: "",
       date: new Date(),
@@ -161,10 +158,7 @@ export default function AddMeetingModal({
     setEmails([]);
     setAttendeeInput("");
 
-    setTimeout(() => {
-      setSuccess(false);
-      onOpenChange(false);
-    }, 1000);
+    onOpenChange(false);
   };
 
   return (
@@ -360,11 +354,6 @@ export default function AddMeetingModal({
           <Button type="submit" className="w-full mt-4" disabled={loading}>
             {loading ? "Creating..." : "Create Meeting"}
           </Button>
-          {success && (
-            <p className="text-green-600 text-center text-sm mt-4">
-              Meeting created!
-            </p>
-          )}
         </form>
       </DialogContent>
     </Dialog>
