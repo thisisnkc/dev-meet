@@ -134,6 +134,7 @@ export default function AddMeetingModal({
     if (!formData.date) errors.date = "Date is required";
     if (!formData.from.trim()) errors.from = "Start time is required";
     if (!formData.to.trim()) errors.to = "End time is required";
+    if (!emails.length) errors.attendees = "At least one attendee is required";
 
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;

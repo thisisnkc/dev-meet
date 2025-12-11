@@ -1,11 +1,9 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { PrismaClient } = require("@prisma/client");
+const { prisma } = require("../../lib/prisma");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { notificationQueue } = require("../notificationQueue");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const axios = require("axios");
-
-const prisma = new PrismaClient();
 
 notificationQueue.process("notify-user", async (job: any, done: any) => {
   try {

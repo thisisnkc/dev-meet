@@ -22,3 +22,18 @@ export const joinMeeting = (meetingId?: string) => {
 
   window.open(fullUrl, "_blank");
 };
+
+export const genJitsiTokenPayload = (email?: string, displayName?: string) => {
+  return {
+    context: {
+      user: {
+        name: displayName || "Host",
+        email,
+      },
+    },
+    aud: process.env.MEET_APP_ID,
+    iss: process.env.MEET_APP_ID,
+    sub: "meet.jitsi", //** upgraded to the latest version of jitsi which takes 'meet.jisti' as sub
+    room: "*",
+  };
+};

@@ -82,17 +82,26 @@ export default function LoginPage() {
         const data = await response.json();
         setName(data.user.name);
         setAvatar(data.user.avatar);
-        toast("Login successful!");
-        router.push("/dashboard");
 
+        // Store token in cookies (12 hours expiry to match backend)
+        document.cookie = `token=${data.token}; path=/; max-age=${
+          12 * 60 * 60
+        }; SameSite=Lax`;
+
+        // Store user data in localStorage
         const user = {
           id: data.user.id,
           name: data.user.name,
           email: data.user.email,
           avatar: data.user.avatar,
         };
-
         localStorage.setItem("user", JSON.stringify(user));
+
+        toast("Login successful!");
+
+        // Redirect back to original page or dashboard
+        const redirectUrl = (router.query.redirect as string) || "/dashboard";
+        router.push(redirectUrl);
       }
 
       // proceed with API call
@@ -128,7 +137,7 @@ export default function LoginPage() {
                 </label>
                 <Input
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder="Enter your email"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
@@ -146,7 +155,7 @@ export default function LoginPage() {
                 </label>
                 <Input
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);

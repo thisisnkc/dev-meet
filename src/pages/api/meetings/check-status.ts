@@ -1,8 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/redis";
-
-const prisma = new PrismaClient();
 
 export default async function handler(
   req: NextApiRequest,
@@ -45,7 +43,6 @@ const checkMeetingStatus = async (
         },
       },
     });
-    console.log("🚀 ~ isMeetingExist:", isMeetingExist);
 
     if (!isMeetingExist) {
       return res.status(404).json({ message: "Meeting not found" });
@@ -69,7 +66,6 @@ const checkMeetingWithPin = async (
   res: NextApiResponse
 ) => {
   const { meetingPin } = req.body;
-  console.log("🚀 ~ meetingPin:", meetingPin);
 
   if (
     !meetingPin ||
@@ -96,7 +92,6 @@ const checkMeetingWithPin = async (
       },
     },
   });
-  console.log("🚀 ~ meeting:", meeting);
 
   if (!meeting) {
     return res.status(404).json({ message: "Meeting not found" });

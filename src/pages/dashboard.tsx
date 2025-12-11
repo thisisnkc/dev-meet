@@ -1,7 +1,15 @@
 // src/pages/dashboard.tsx
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Copy, Share2, PlusCircle } from "lucide-react";
+import {
+  Copy,
+  Share2,
+  PlusCircle,
+  ExternalLink,
+  Calendar,
+  Users,
+  Clock,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AddMeetingModal from "@/components/AddMeetingModal";
@@ -17,7 +25,7 @@ interface Attendee {
 interface Meeting {
   id: string;
   title: string;
-  date: string; // ISO format
+  date: string;
   from: string;
   to: string;
   description?: string;
@@ -56,7 +64,6 @@ export default function DashboardPage() {
         const res = await fetch(`/api/bookings?userId=${user.id}`);
         if (!res.ok) throw new Error("Failed to fetch meetings");
         const data = await res.json();
-        // API returns { meetings: Meeting[] }
         setMeetings(data.meetings || []);
         setStats({
           meetings: data.meetings?.length || 0,
@@ -71,8 +78,6 @@ export default function DashboardPage() {
               0
             ) || 0,
         });
-
-        //TODO: need to figure out if this is needed or not
         setBookingUrl(`https://devmeet.com/book/${user.email?.split("@")[0]}`);
       } catch (err) {
         if (err instanceof Error) setError(err.message);
@@ -87,6 +92,7 @@ export default function DashboardPage() {
   const handleCopy = () => {
     navigator.clipboard.writeText(bookingUrl);
     setCopySuccess(true);
+    toast.success("Link copied!");
     setTimeout(() => setCopySuccess(false), 2000);
   };
 
@@ -132,14 +138,17 @@ export default function DashboardPage() {
         attendees: prev.attendees + (result.booking.attendees?.length || 0),
       }));
 
-      toast.info("Meeting created successfully", {
-        description:
-          "You will receive a reminder notification 10 minutes before the meeting starts.",
-        duration: 10000,
+      toast.success("Meeting created!", {
+        description: "Reminder set for 1 minute before start time.",
       });
     } catch (err) {
-      if (err instanceof Error) setError(err.message);
-      else setError("Unknown error");
+      if (err instanceof Error) {
+        setError(err.message);
+        toast.error(err.message);
+      } else {
+        setError("Unknown error");
+        toast.error("Failed to create meeting");
+      }
     } finally {
       setLoading(false);
     }
@@ -147,68 +156,189 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      {/* Main dashboard content starts here */}
-      <div className="space-y-10">
-        <Card>
-          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="text-lg">Your Booking Link</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1 break-words">
-                {bookingUrl || "Loading..."}
-              </p>
-            </div>
-            <div className="flex gap-2 mt-3 sm:mt-0">
-              <Button onClick={handleCopy} disabled={!bookingUrl}>
-                <Copy className="w-4 h-4 mr-1" />
-                {copySuccess ? "Copied" : "Copy"}
-              </Button>
-              <Button variant="outline">
-                <Share2 className="w-4 h-4 mr-1" />
-                Share
-              </Button>
-            </div>
-          </CardHeader>
-        </Card>
-
-        <div className="flex flex-wrap gap-4">
-          <Button onClick={() => setModalOpen(true)}>
-            <PlusCircle className="w-4 h-4 mr-2" />
-            Create New Meeting
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
+            <p className="text-slate-600 mt-1">
+              Manage your meetings and availability
+            </p>
+          </div>
+          <Button
+            onClick={() => setModalOpen(true)}
+            size="lg"
+            className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/30"
+          >
+            <PlusCircle className="w-5 h-5 mr-2" />
+            Create Meeting
           </Button>
-          {/* //TODO: need to figure out if this is needed or not */}
-          <Button variant="outline">Manage Availability</Button>
         </div>
 
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <Card className="border-none shadow-lg bg-gradient-to-br from-indigo-500 to-indigo-600 text-white overflow-hidden relative">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between relative z-10">
+                <div>
+                  <p className="text-indigo-100 text-sm font-medium">
+                    Total Meetings
+                  </p>
+                  <p className="text-4xl font-bold mt-2">{stats.meetings}</p>
+                </div>
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <Calendar className="w-6 h-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600 text-white overflow-hidden relative">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between relative z-10">
+                <div>
+                  <p className="text-emerald-100 text-sm font-medium">
+                    Slots Filled
+                  </p>
+                  <p className="text-4xl font-bold mt-2">{stats.slotsFilled}</p>
+                </div>
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <Clock className="w-6 h-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-lg bg-gradient-to-br from-violet-500 to-violet-600 text-white overflow-hidden relative">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between relative z-10">
+                <div>
+                  <p className="text-violet-100 text-sm font-medium">
+                    Total Attendees
+                  </p>
+                  <p className="text-4xl font-bold mt-2">{stats.attendees}</p>
+                </div>
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <Users className="w-6 h-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Booking Link */}
+        <Card className="border-slate-200 shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Share2 className="w-5 h-5 text-indigo-600" />
+              Your Booking Link
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
+                <p className="text-sm text-slate-700 font-mono break-all">
+                  {bookingUrl || "Loading..."}
+                </p>
+              </div>
+              <Button
+                onClick={handleCopy}
+                disabled={!bookingUrl}
+                variant="outline"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                {copySuccess ? "Copied!" : "Copy"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Meetings Section */}
         <section>
-          <h2 className="text-xl font-semibold mb-4 text-slate-800">
-            Upcoming Meetings
-          </h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-slate-900">
+              Upcoming Meetings
+            </h2>
+            {meetings.length > 0 && (
+              <span className="text-sm text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+                {meetings.length} scheduled
+              </span>
+            )}
+          </div>
+
           {loading ? (
-            <p className="text-muted-foreground">Loading meetings...</p>
+            <div className="flex items-center justify-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+            </div>
           ) : error ? (
-            <p className="text-red-500">{error}</p>
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="p-6 text-center">
+                <p className="text-red-600">{error}</p>
+              </CardContent>
+            </Card>
           ) : meetings.length === 0 ? (
-            <p className="text-muted-foreground">No upcoming meetings.</p>
+            <Card className="border-dashed border-2 border-slate-300 bg-slate-50/50">
+              <CardContent className="p-16 text-center">
+                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="w-8 h-8 text-indigo-600" />
+                </div>
+                <p className="text-slate-900 font-semibold text-lg mb-2">
+                  No upcoming meetings
+                </p>
+                <p className="text-sm text-slate-500 mb-6">
+                  Create your first meeting to get started
+                </p>
+                <Button onClick={() => setModalOpen(true)}>
+                  <PlusCircle className="w-4 h-4 mr-2" />
+                  Create Meeting
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid md:grid-cols-2 gap-4">
               {meetings.map((meeting) => (
-                <Card key={meeting.id} className="border border-slate-200">
-                  <CardHeader>
-                    <CardTitle className="text-md font-medium">
-                      {meeting.date.toLocaleString().split("T")[0]} (
-                      {meeting.from} - {meeting.to})
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {meeting.title}
-                    </p>
+                <Card
+                  key={meeting.id}
+                  className="border-slate-200 hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg font-semibold text-slate-900 mb-2">
+                          {meeting.title}
+                        </CardTitle>
+                        <div className="flex flex-col gap-2 text-sm text-slate-600">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-indigo-600" />
+                            <span>
+                              {new Date(meeting.date).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-emerald-600" />
+                            <span>
+                              {meeting.from} - {meeting.to}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-violet-600" />
+                            <span>
+                              {meeting.attendees?.length || 0} attendee
+                              {meeting.attendees?.length !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </CardHeader>
-                  <CardContent className="flex justify-between items-center">
-                    <p className="text-sm text-muted-foreground">
-                      👥 {meeting.attendees?.length || 0} Attendee
-                      {meeting.attendees?.length !== 1 ? "s" : ""}
-                    </p>
+                  <CardContent className="pt-0">
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={() => joinMeeting()}>
+                      <Button
+                        size="sm"
+                        onClick={() => joinMeeting()}
+                        className="flex-1"
+                      >
+                        <ExternalLink className="w-4 h-4 mr-1" />
                         Join
                       </Button>
                       <Button
@@ -228,38 +358,6 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold mb-4 text-slate-800">
-            Your Summary
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-indigo-600">
-                  {stats.meetings}
-                </p>
-                <p className="text-sm text-muted-foreground">Meetings Hosted</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-indigo-600">
-                  {stats.slotsFilled}
-                </p>
-                <p className="text-sm text-muted-foreground">Slots Filled</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-indigo-600">
-                  {stats.attendees}
-                </p>
-                <p className="text-sm text-muted-foreground">Total Attendees</p>
-              </CardContent>
-            </Card>
-          </div>
         </section>
       </div>
 

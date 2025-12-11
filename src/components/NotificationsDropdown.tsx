@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useSocketContext } from "@/context/SocketContext";
 
 export type Notification = {
+  id: string;
   title: string;
   description: string;
   createdAt: string;
@@ -88,6 +89,12 @@ export default function NotificationsDropdown() {
     }
   }, [userId]);
 
+  // Fetch notifications on mount and when userId changes
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  // Also fetch when dropdown opens
   useEffect(() => {
     if (open) {
       fetchNotifications();
@@ -106,6 +113,22 @@ export default function NotificationsDropdown() {
     });
 
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const markAsRead = async (notificationId: string) => {
+    try {
+      await fetch(`/api/notifications/mark-read`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationId }),
+      });
+
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
+      );
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
   };
 
   const calculateDuration = (createdAt: string) => {
@@ -157,7 +180,7 @@ export default function NotificationsDropdown() {
               </button> */}
             </div>
           </div>
-          <ul className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+          <ul className="max-h-96 overflow-y-auto">
             {notifications.length === 0 ? (
               <li className="py-8 text-center text-slate-400">
                 No notifications
@@ -166,22 +189,36 @@ export default function NotificationsDropdown() {
               notifications.map((n, i) => (
                 <li
                   key={i}
-                  className={`flex items-start gap-3 px-4 py-3 transition-colors ${
-                    n.read ? "bg-white" : "bg-indigo-50"
+                  className={`border-b border-slate-100 last:border-b-0 transition-colors hover:bg-slate-50 ${
+                    n.read ? "bg-white" : "bg-indigo-50/50"
                   }`}
                 >
-                  {n.read ? (
-                    <CheckCircle className="w-5 h-5 text-green-400 mt-1" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-indigo-400 mt-1" />
-                  )}
-                  <div className="flex-1">
-                    <div className="font-medium text-slate-800">{n.title}</div>
-                    <div className="text-xs text-slate-600 mb-1">
-                      {n.description}
-                    </div>
-                    <div className="text-xs text-slate-400">
-                      {calculateDuration(n.createdAt)}
+                  <div className="flex items-start gap-3 px-4 py-3">
+                    {n.read ? (
+                      <CheckCircle className="w-5 h-5 text-green-500 mt-1 flex-shrink-0" />
+                    ) : (
+                      <div className="w-2 h-2 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-slate-800 mb-0.5">
+                        {n.title}
+                      </div>
+                      <div className="text-sm text-slate-600 mb-1">
+                        {n.description}
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-xs text-slate-400">
+                          {calculateDuration(n.createdAt)}
+                        </div>
+                        {!n.read && (
+                          <button
+                            onClick={() => markAsRead(n.id)}
+                            className="text-xs text-indigo-600 hover:text-indigo-700 hover:underline font-medium"
+                          >
+                            Mark as read
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </li>

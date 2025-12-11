@@ -1,10 +1,8 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { PrismaClient } from "@prisma/client";
+import moment from "moment-timezone";
 import { genRandomMeetingId, genSixDigitOtp } from "@/utlis/constants";
 import { notificationQueue } from "@/queue/notificationQueue";
-import moment from "moment-timezone";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function handler(
   req: NextApiRequest,
@@ -70,7 +68,7 @@ export default async function handler(
       });
 
       const scheduledDateTime = moment.tz(`${date}T${from}`, "Asia/Kolkata");
-      const notifyAt = scheduledDateTime.clone().subtract(10, "minutes");
+      const notifyAt = scheduledDateTime.clone().subtract(1, "minutes");
       const delay = Math.max(notifyAt.diff(moment()), 0);
 
       if (delay > 0) {
