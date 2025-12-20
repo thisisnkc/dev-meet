@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -34,6 +34,7 @@ model Booking {
   organizer   User        @relation(fields: [organizerId], references: [id])
 
   attendees   Attendee[]
+  hostJoined  Boolean     @default(false)
 }
 
 model Attendee {
@@ -60,5 +61,20 @@ model Notification {
   createdAt  DateTime @default(now())
 
   @@index([userId])
+}
+
+model Job {
+  id          String   @id @default(uuid())
+  type        String
+  data        Json
+  status      String   @default("pending") // pending, processing, completed, failed
+  runAt       DateTime
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(3)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  error       String?
+
+  @@index([status, runAt])
 }
 

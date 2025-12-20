@@ -4,7 +4,6 @@ import { Server as SocketIOServer } from "socket.io";
 import type { NextApiRequest } from "next";
 import { NextApiResponseServerIO } from "@/types/next";
 import debug from "debug";
-import { redis } from "@/lib/redis";
 
 export const config = {
   api: {
@@ -31,6 +30,14 @@ export default function handler(
       },
     });
 
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { setIO } = require("@/lib/socket-store");
+      setIO(io);
+    } catch {
+      // ignore
+    }
+
     io.on("connection", (socket) => {
       debugLogger("Client connected", socket.id);
 
@@ -43,20 +50,33 @@ export default function handler(
         debugLogger("Client disconnected", socket.id);
       });
 
-      socket.on("host-join", (meetingId: string, userId: string) => {
+      socket.on("host-join", async (meetingId: string) => {
         socket.join(meetingId);
 
-        redis.set(`meeting:${meetingId}:host`, userId, "EX", 60 * 60 * 24);
+        // Update host status in DB
+        try {
+          // Since we can't easily import prisma client here if it wasn't already (Next.js context),
+          // we better rely on the global prisma if available or dynamic import?
+          // The file already imports redis at top level, so importing prisma at top level is fine.
+          // Wait, I need to add the import first.
+
+          // Using strict import from lib/prisma
+          const { prisma } = await import("@/lib/prisma");
+
+          await prisma.booking.update({
+            where: { meetingId },
+            data: { hostJoined: true },
+          });
+        } catch (e) {
+          debugLogger("Error updating host status", e);
+        }
 
         socket.emit("host-joined", meetingId);
         debugLogger(`Host joined meeting ${meetingId}`);
       });
 
-      socket.on("attendee-join", (meetingId: string, userId: string) => {
+      socket.on("attendee-join", (meetingId: string) => {
         socket.join(meetingId);
-
-        redis.set(`meeting:${meetingId}:attendee`, userId, "EX", 60 * 60 * 24);
-
         debugLogger(`Attendee joined meeting ${meetingId}`);
       });
     });

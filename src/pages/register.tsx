@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Loader2Icon } from "lucide-react";
+import { Loader2Icon, Check, X } from "lucide-react";
 
 import {
   Card,
@@ -28,18 +28,46 @@ export default function RegisterPage() {
   });
 
   const [loading, setLoading] = useState(false);
-
   const [errors, setErrors] = useState<Partial<typeof form>>({});
+
+  const passwordRequirements = [
+    {
+      id: "length",
+      label: "At least 8 characters",
+      valid: form.password.length >= 8,
+    },
+    {
+      id: "upper",
+      label: "At least one uppercase letter",
+      valid: /[A-Z]/.test(form.password),
+    },
+    {
+      id: "lower",
+      label: "At least one lowercase letter",
+      valid: /[a-z]/.test(form.password),
+    },
+  ];
 
   const validate = () => {
     const newErrors: Partial<typeof form> = {};
 
     if (!form.name.trim()) newErrors.name = "Name is required";
     if (!form.email.includes("@")) newErrors.email = "Valid email is required";
-    if (form.password.length < 6)
-      newErrors.password = "Password must be at least 6 characters";
+
+    // Password validation
+    if (form.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
+    } else if (!/[A-Z]/.test(form.password)) {
+      newErrors.password =
+        "Password must contain at least one uppercase letter";
+    } else if (!/[a-z]/.test(form.password)) {
+      newErrors.password =
+        "Password must contain at least one lowercase letter";
+    }
+
     if (form.password !== form.confirmPassword)
       newErrors.confirmPassword = "Passwords do not match";
+
     if (!form.avatar) newErrors.avatar = "Please select an avatar";
 
     setErrors(newErrors);
@@ -136,6 +164,7 @@ export default function RegisterPage() {
                   value={form.password}
                   onChange={handleChange}
                 />
+
                 {errors.password && (
                   <p className="text-sm text-red-500 mt-1">{errors.password}</p>
                 )}
@@ -155,6 +184,31 @@ export default function RegisterPage() {
                   <p className="text-sm text-red-500 mt-1">
                     {errors.confirmPassword}
                   </p>
+                )}
+
+                {/* Password Strength Indicators */}
+                {form.password && (
+                  <div className="mt-2 space-y-1 bg-slate-50 p-2 rounded-md border border-slate-100">
+                    <p className="text-xs font-semibold text-gray-500 mb-1">
+                      Password requirements:
+                    </p>
+                    {passwordRequirements.map((req) => (
+                      <div key={req.id} className="flex items-center space-x-2">
+                        {req.valid ? (
+                          <Check className="w-3 h-3 text-green-500" />
+                        ) : (
+                          <X className="w-3 h-3 text-red-400" />
+                        )}
+                        <span
+                          className={`text-xs ${
+                            req.valid ? "text-green-600" : "text-gray-500"
+                          }`}
+                        >
+                          {req.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 

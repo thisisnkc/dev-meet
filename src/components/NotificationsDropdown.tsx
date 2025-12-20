@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Bell, CheckCircle, XCircle } from "lucide-react";
+import { Bell, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useSocketContext } from "@/context/SocketContext";
 

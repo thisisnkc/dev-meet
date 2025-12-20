@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@/lib/prisma";
-import { redis } from "@/lib/redis";
 
 export default async function handler(
   req: NextApiRequest,
@@ -33,7 +32,7 @@ const checkMeetingStatus = async (
         .json({ message: "Missing or invalid meeting ID or attendee ID" });
     }
 
-    const isMeetingExist = await prisma.booking.findFirst({
+    const meeting = await prisma.booking.findFirst({
       where: {
         meetingId: meetingId,
         attendees: {
@@ -42,15 +41,16 @@ const checkMeetingStatus = async (
           },
         },
       },
+      select: {
+        hostJoined: true,
+      },
     });
 
-    if (!isMeetingExist) {
+    if (!meeting) {
       return res.status(404).json({ message: "Meeting not found" });
     }
 
-    const hasHostJoined = await redis.get(`meeting:${meetingId}:host`);
-
-    if (hasHostJoined) {
+    if (meeting.hostJoined) {
       return res.status(200).json({ message: "Host has joined" });
     }
 
