@@ -20,6 +20,7 @@ export default function handler(
   if (!res.socket.server.io) {
     debugLogger("🔌 Initializing Socket.io");
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const httpServer: NetServer = res.socket.server as any;
     const io = new SocketIOServer(httpServer, {
       path: "/api/socketio",

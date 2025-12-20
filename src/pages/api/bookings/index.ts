@@ -113,6 +113,7 @@ export default async function handler(
         return res.status(400).json({ message: "Missing userId in query" });
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const whereClause: any = {
         organizerId: userId,
       };

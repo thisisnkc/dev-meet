@@ -9,6 +9,7 @@ import { PhoneOff } from "lucide-react";
 import { genJitsiTokenPayload } from "@/utlis/constants";
 import { requireAuth, AuthUser } from "@/lib/auth";
 // Type declarations for Jitsi Meet API
+// eslint-disable-next-line @typescript-eslint/no-namespace, @typescript-eslint/no-unused-vars
 declare namespace JitsiMeetJS {
   interface JitsiMeetExternalAPI {
     dispose: () => void;
@@ -23,6 +24,7 @@ declare namespace JitsiMeetJS {
 
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     JitsiMeetExternalAPI: any; // Using any to avoid type conflicts with Jitsi's global declaration
   }
 }
@@ -105,7 +107,7 @@ const MeetingPage = (props: { token: string; user?: AuthUser }) => {
       setError("Failed to initialize the meeting. Please try again.");
       setIsConnecting(false);
     }
-  }, [roomName, handleDisconnect]);
+  }, [roomName, handleDisconnect, props.token]);
 
   // Initialize Jitsi when script is loaded and container is ready
   useEffect(() => {

@@ -18,6 +18,7 @@ export default async function handler(
   }
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {};
 
     // Validate and prepare optional fields

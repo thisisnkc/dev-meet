@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
   Search,
-  Bell,
   Plus,
   Clock,
   Video,
@@ -17,7 +16,6 @@ import {
   format,
   addDays,
   startOfWeek,
-  endOfWeek,
   subWeeks,
   addWeeks,
   isSameDay,
@@ -40,7 +38,6 @@ interface Meeting {
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [view, setView] = useState<"day" | "week" | "month">("week");
 
@@ -53,13 +50,8 @@ export default function CalendarPage() {
   const startDate = weekDays[0];
   const endDate = weekDays[6];
 
-  useEffect(() => {
-    fetchMeetings();
-  }, [startDate, endDate]); // Fetch when week changes
-
-  const fetchMeetings = async () => {
+  const fetchMeetings = useCallback(async () => {
     try {
-      setLoading(true);
       const userStr = localStorage.getItem("user");
       if (!userStr) return;
       const user = JSON.parse(userStr);
@@ -76,11 +68,14 @@ export default function CalendarPage() {
     } catch (error) {
       console.error("Failed to fetch meetings", error);
       toast.error("Failed to load meetings");
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [startDate, endDate]);
 
+  useEffect(() => {
+    fetchMeetings();
+  }, [fetchMeetings]);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleCreateMeeting = async (data: any) => {
     try {
       const userStr = localStorage.getItem("user");
@@ -93,6 +88,7 @@ export default function CalendarPage() {
           "Content-Type": "application/json",
           "x-user-id": user.id,
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         body: JSON.stringify({
           title: data.title,
           date: data.date,
@@ -109,7 +105,8 @@ export default function CalendarPage() {
       setMeetings((prev) => [...prev, result.booking]);
       toast.success("Meeting scheduled successfully!");
     } catch (error) {
-      toast.error("Failed to schedule meeting");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toast.error("Failed to schedule meeting: " + (error as any).message);
     }
   };
 
@@ -156,11 +153,11 @@ export default function CalendarPage() {
 
       // Debug log for checking mismatches
       const match = isSameDay(meetingDate, date);
-      console.log(
-        `Checking ${
-          m.title
-        }: Meeting(${meetingDate.toISOString()}) vs Day(${date.toISOString()}) = ${match}`
-      );
+      // console.log(
+      //   `Checking ${
+      //     m.title
+      //   }: Meeting(${meetingDate.toISOString()}) vs Day(${date.toISOString()}) = ${match}`
+      // );
 
       return match;
     });
@@ -244,6 +241,7 @@ export default function CalendarPage() {
               {["Day", "Week", "Month", "Year"].map((v) => (
                 <button
                   key={v}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   onClick={() => setView(v.toLowerCase() as any)}
                   className={`px-3 py-1 rounded-md transition-all ${
                     view === v.toLowerCase()
