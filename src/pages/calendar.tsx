@@ -1,74 +1,92 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Calendar as CalendarIcon } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Clock, Users, Calendar, ExternalLink } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  Search,
+  Bell,
+  Plus,
+  Clock,
+  Video,
+} from "lucide-react";
 import AddMeetingModal from "@/components/AddMeetingModal";
 import { toast } from "sonner";
-import { useRouter } from "next/router";
+import {
+  format,
+  addDays,
+  startOfWeek,
+  endOfWeek,
+  subWeeks,
+  addWeeks,
+  isSameDay,
+  parse,
+  differenceInMinutes,
+} from "date-fns";
 import { joinMeeting } from "@/utlis/constants";
+import { Input } from "@/components/ui/input";
+
+interface Meeting {
+  id: string;
+  title: string;
+  date: string; // ISO date string YYYY-MM-DD
+  from: string; // HH:mm
+  to: string; // HH:mm
+  description?: string;
+  attendees: { id: string; email: string }[];
+}
 
 export default function CalendarPage() {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(false);
-  type Meeting = {
-    id: number;
-    title: string;
-    date: string;
-    from: string;
-    to: string;
-    attendees: { id: string; email: string }[];
+  const [modalOpen, setModalOpen] = useState(false);
+  const [view, setView] = useState<"day" | "week" | "month">("week");
+
+  // Generate days for the week view
+  const weekDays = useMemo(() => {
+    const start = startOfWeek(currentDate, { weekStartsOn: 1 }); // Start on Monday
+    return Array.from({ length: 7 }).map((_, i) => addDays(start, i));
+  }, [currentDate]);
+
+  const startDate = weekDays[0];
+  const endDate = weekDays[6];
+
+  useEffect(() => {
+    fetchMeetings();
+  }, [startDate, endDate]); // Fetch when week changes
+
+  const fetchMeetings = async () => {
+    try {
+      setLoading(true);
+      const userStr = localStorage.getItem("user");
+      if (!userStr) return;
+      const user = JSON.parse(userStr);
+
+      const startStr = format(startDate, "yyyy-MM-dd");
+      const endStr = format(endDate, "yyyy-MM-dd");
+
+      const res = await fetch(
+        `/api/bookings?userId=${user.id}&startDate=${startStr}&endDate=${endStr}`
+      );
+      const data = await res.json();
+      console.log("data", data.meetings);
+      setMeetings(data.meetings || []);
+    } catch (error) {
+      console.error("Failed to fetch meetings", error);
+      toast.error("Failed to load meetings");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const router = useRouter();
-  const { date: query_date } = router.query;
-  const [modalOpen, setModalOpen] = useState(false);
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
-
-  useEffect(() => {
-    if (query_date && typeof query_date === "string") {
-      const modifiedDate = new Date(query_date);
-      if (!isNaN(modifiedDate.getTime())) {
-        setSelectedDate(modifiedDate);
-        return;
-      }
-    }
-    setSelectedDate(new Date());
-  }, [query_date]);
-
-  useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (!userStr) return;
-    const USER_ID = JSON.parse(userStr).id;
-    if (selectedDate === null || !USER_ID) return;
-    setLoading(true);
-    const dateStr = selectedDate.toISOString().split("T")[0];
-    fetch(`/api/bookings?userId=${USER_ID}&date=${dateStr}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setMeetings(data.meetings || []);
-        setLoading(false);
-      })
-      .catch(() => {
-        setMeetings([]);
-        setLoading(false);
-      });
-  }, [selectedDate]);
-
-  const handleCreateMeeting = async (data: {
-    title: string;
-    date: string;
-    from: string;
-    to: string;
-    description?: string;
-    attendees: string[];
-  }) => {
-    setLoading(true);
+  const handleCreateMeeting = async (data: any) => {
     try {
       const userStr = localStorage.getItem("user");
       if (!userStr) throw new Error("User not found");
       const user = JSON.parse(userStr);
+
       const res = await fetch("/api/bookings", {
         method: "POST",
         headers: {
@@ -84,156 +102,289 @@ export default function CalendarPage() {
           attendeeEmails: data.attendees,
         }),
       });
-      if (!res.ok) {
-        const msg = (await res.json()).message || "Failed to create meeting";
-        throw new Error(msg);
-      }
+
+      if (!res.ok) throw new Error("Failed to create meeting");
+
       const result = await res.json();
-      setMeetings((prev) => [result.booking, ...prev]);
-      toast.success("Meeting created successfully!");
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to create meeting"
-      );
-    } finally {
-      setLoading(false);
+      setMeetings((prev) => [...prev, result.booking]);
+      toast.success("Meeting scheduled successfully!");
+    } catch (error) {
+      toast.error("Failed to schedule meeting");
     }
   };
 
-  if (!selectedDate) {
-    return null;
-  }
+  const navigate = (direction: "prev" | "next") => {
+    if (direction === "prev") {
+      setCurrentDate(subWeeks(currentDate, 1));
+    } else {
+      setCurrentDate(addWeeks(currentDate, 1));
+    }
+  };
+
+  const goToday = () => setCurrentDate(new Date());
+
+  // Helper to calculate event position
+  const getEventStyle = (meeting: Meeting) => {
+    const START_HOUR = 0; // 00:00 / 12 AM
+    const HOUR_HEIGHT = 80; // px
+
+    // Parse times
+    const startTime = parse(meeting.from, "HH:mm", new Date());
+    const endTime = parse(meeting.to, "HH:mm", new Date());
+
+    // Calculate minutes from start of day
+    const startMinutes = differenceInMinutes(
+      startTime,
+      new Date().setHours(START_HOUR, 0, 0, 0)
+    );
+    const durationMinutes = differenceInMinutes(endTime, startTime);
+
+    const top = (startMinutes / 60) * HOUR_HEIGHT;
+    const height = (durationMinutes / 60) * HOUR_HEIGHT;
+
+    return {
+      top: `${top}px`,
+      height: `${Math.max(height, 40)}px`, // Minimum height
+    };
+  };
+
+  // Filter meetings for a specific date
+  const getMeetingsForDate = (date: Date) => {
+    return meetings.filter((m) => {
+      // Handle ISO strings strictly
+      const meetingDate = new Date(m.date);
+
+      // Debug log for checking mismatches
+      const match = isSameDay(meetingDate, date);
+      console.log(
+        `Checking ${
+          m.title
+        }: Meeting(${meetingDate.toISOString()}) vs Day(${date.toISOString()}) = ${match}`
+      );
+
+      return match;
+    });
+  };
+
+  const hours = Array.from({ length: 24 }).map((_, i) => i); // 00:00 to 23:00
+
+  const cardColors = [
+    "bg-red-50 border-l-4 border-red-400 text-red-900",
+    "bg-blue-50 border-l-4 border-blue-400 text-blue-900",
+    "bg-green-50 border-l-4 border-green-400 text-green-900",
+    "bg-amber-50 border-l-4 border-amber-400 text-amber-900",
+    "bg-purple-50 border-l-4 border-purple-400 text-purple-900",
+  ];
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col h-[calc(100vh-100px)] space-y-6">
+        {/* Top Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Calendar</h1>
-            <p className="text-slate-600 mt-1">
-              View and manage your scheduled meetings
+            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <CalendarIcon className="w-6 h-6 text-slate-700" />
+              Appointments
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Manage your weekly schedule
             </p>
           </div>
-          <Button
-            onClick={() => setModalOpen(true)}
-            size="lg"
-            className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/30"
-          >
-            <PlusCircle className="w-5 h-5 mr-2" />
-            Add Meeting
-          </Button>
+
+          <div className="flex items-center gap-3">
+            <div className="relative text-slate-500 hidden sm:block">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" />
+              <Input
+                placeholder="Search events..."
+                className="pl-9 w-64 bg-white"
+              />
+            </div>
+            <Button
+              onClick={() => setModalOpen(true)}
+              className="bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-500/20"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Appointment
+            </Button>
+          </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Calendar Selector */}
-          <Card className="lg:col-span-1 border-slate-200 shadow-lg">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-indigo-600" />
-                Select Date
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <CalendarIcon
-                mode="single"
-                selected={selectedDate}
-                month={query_date ? selectedDate : undefined}
-                onSelect={(date) => setSelectedDate(date ?? null)}
-                captionLayout="dropdown"
-                className="rounded-lg"
-                required={false}
-              />
-            </CardContent>
-          </Card>
+        {/* Toolbar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={goToday}>
+              Today
+            </Button>
+            <div className="flex items-center border rounded-md">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => navigate("prev")}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => navigate("next")}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
 
-          {/* Meetings List */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">
-                  {selectedDate.toLocaleDateString("en-US", {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </h2>
-                {meetings.length > 0 && (
-                  <p className="text-sm text-slate-600 mt-1">
-                    {meetings.length} meeting{meetings.length !== 1 ? "s" : ""}{" "}
-                    scheduled
-                  </p>
-                )}
-              </div>
+          <h2 className="text-lg font-semibold text-slate-800">
+            {format(currentDate, "MMMM yyyy")}
+          </h2>
+
+          <div className="flex items-center border rounded-md bg-slate-50 p-1">
+            <div className="flex text-sm">
+              {["Day", "Week", "Month", "Year"].map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v.toLowerCase() as any)}
+                  className={`px-3 py-1 rounded-md transition-all ${
+                    view === v.toLowerCase()
+                      ? "bg-white shadow-sm text-slate-900 font-medium"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Week View Grid */}
+        <div className="flex-1 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col min-h-0">
+          {/* Header Row */}
+          <div className="grid grid-cols-8 border-b border-slate-200 bg-white z-10 sticky top-0">
+            {/* Time Column Header */}
+            <div className="col-span-1 border-r border-slate-100 flex items-center justify-center p-4">
+              <span className="text-xs font-semibold text-slate-400">IST</span>
             </div>
 
-            {loading ? (
-              <div className="flex items-center justify-center py-16">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+            {/* Days Headers */}
+            {weekDays.map((day) => (
+              <div
+                key={day.toISOString()}
+                className={`col-span-1 p-4 border-r border-slate-100 text-center last:border-r-0 ${
+                  isSameDay(day, new Date()) ? "bg-indigo-50/50" : ""
+                }`}
+              >
+                <div
+                  className={`text-xs font-bold mb-1 uppercase tracking-wide ${
+                    isSameDay(day, new Date())
+                      ? "text-indigo-600"
+                      : "text-slate-500"
+                  }`}
+                >
+                  {format(day, "EEE")}
+                </div>
+                <div
+                  className={`text-xl font-bold ${
+                    isSameDay(day, new Date())
+                      ? "text-indigo-700"
+                      : "text-slate-800"
+                  }`}
+                >
+                  {format(day, "d")}
+                </div>
               </div>
-            ) : meetings.length === 0 ? (
-              <Card className="border-dashed border-2 border-slate-300 bg-slate-50/50">
-                <CardContent className="p-16 text-center">
-                  <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Calendar className="w-8 h-8 text-indigo-600" />
-                  </div>
-                  <p className="text-slate-900 font-semibold text-lg mb-2">
-                    No meetings scheduled
-                  </p>
-                  <p className="text-sm text-slate-500 mb-6">
-                    Add a meeting for {selectedDate.toLocaleDateString()}
-                  </p>
-                  <Button onClick={() => setModalOpen(true)}>
-                    <PlusCircle className="w-4 h-4 mr-2" />
-                    Add Meeting
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {meetings.map((meeting) => (
-                  <Card
-                    key={meeting.id}
-                    className="border-slate-200 hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5"
+            ))}
+          </div>
+
+          {/* Scrollable Grid Body */}
+          <div className="flex-1 overflow-y-auto relative">
+            <div className="grid grid-cols-8 relative min-h-[1920px]">
+              {/* Time Column */}
+              <div className="col-span-1 border-r border-slate-100 bg-slate-50/30">
+                {hours.map((hour) => (
+                  <div
+                    key={hour}
+                    className="h-20 border-b border-slate-100 relative"
                   >
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-slate-900 mb-3">
-                            {meeting.title}
-                          </h3>
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm text-slate-600">
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-emerald-600" />
-                              <span>
-                                {meeting.from} - {meeting.to}
-                              </span>
-                            </div>
-                            <div className="hidden sm:block w-1 h-1 bg-slate-300 rounded-full"></div>
-                            <div className="flex items-center gap-2">
-                              <Users className="w-4 h-4 text-violet-600" />
-                              <span>
-                                {meeting.attendees?.length || 0} attendee
-                                {meeting.attendees?.length !== 1 ? "s" : ""}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => joinMeeting()}
-                          className="flex-shrink-0"
-                        >
-                          <ExternalLink className="w-4 h-4 mr-1" />
-                          Join
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    <span className="absolute -top-3 left-0 right-0 text-center text-xs font-medium text-slate-500 bg-transparent px-1">
+                      {hour.toString().padStart(2, "0")}:00
+                    </span>
+                  </div>
                 ))}
               </div>
-            )}
+
+              {/* Days Columns */}
+              {weekDays.map((day) => {
+                const dayMeetings = getMeetingsForDate(day);
+
+                // Sort meetings by start time to ensure consistent ordering calculation
+                dayMeetings.sort((a, b) => {
+                  const startA = parse(a.from, "HH:mm", new Date());
+                  const startB = parse(b.from, "HH:mm", new Date());
+                  return startA.getTime() - startB.getTime();
+                });
+
+                return (
+                  <div
+                    key={day.toISOString()}
+                    className={`col-span-1 relative border-r border-slate-100 last:border-r-0 h-full ${
+                      isSameDay(day, new Date()) ? "bg-indigo-50/10" : ""
+                    }`}
+                  >
+                    {/* Grid Lines */}
+                    {hours.map((h) => (
+                      <div
+                        key={h}
+                        className="h-20 border-b border-slate-50 last:border-b-0"
+                      />
+                    ))}
+
+                    {/* Events */}
+                    {dayMeetings.map((meeting) => {
+                      const style = getEventStyle(meeting);
+                      const colorClass =
+                        cardColors[
+                          meeting.id.charCodeAt(0) % cardColors.length
+                        ];
+
+                      return (
+                        <div
+                          key={meeting.id}
+                          style={{
+                            top: style.top,
+                            height: style.height,
+                            left: "4px",
+                            right: "4px",
+                          }}
+                          className={`absolute rounded-md p-2 text-xs overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition-all z-10 border-l-4 opacity-90 hover:opacity-100 hover:z-20 ${colorClass}`}
+                          onClick={() => toast.info(`Event: ${meeting.title}`)}
+                        >
+                          <div className="font-semibold truncate leading-tight">
+                            {meeting.title}
+                          </div>
+                          <div className="flex items-center gap-1 opacity-90 mt-1 text-[10px]">
+                            <Clock className="w-3 h-3" />
+                            {meeting.from} - {meeting.to}
+                          </div>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              joinMeeting();
+                            }}
+                            className="absolute bottom-1 right-2 p-1 hover:bg-black/5 rounded-full"
+                            title="Join Meeting"
+                          >
+                            <Video className="w-3 h-3 opacity-70" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

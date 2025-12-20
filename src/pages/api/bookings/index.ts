@@ -115,13 +115,19 @@ export default async function handler(
 
       const whereClause: any = {
         organizerId: userId,
-        ...(date && {
-          date: {
-            gte: new Date(date),
-            lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
-          },
-        }),
       };
+
+      if (req.query.startDate && req.query.endDate) {
+        whereClause.date = {
+          gte: new Date(req.query.startDate as string),
+          lte: new Date(req.query.endDate as string),
+        };
+      } else if (date) {
+        whereClause.date = {
+          gte: new Date(date),
+          lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
+        };
+      }
 
       const meetings = await prisma.booking.findMany({
         where: whereClause,

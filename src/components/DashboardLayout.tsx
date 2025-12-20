@@ -52,7 +52,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="h-screen flex bg-slate-50 overflow-hidden">
       {/* Mobile Drawer Sidebar */}
       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
         <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 px-4 py-6 space-y-6 md:hidden">
@@ -83,7 +83,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </Drawer>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 px-4 py-6 space-y-6">
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 px-4 py-6 space-y-6 h-full flex-shrink-0">
         <div className="text-2xl font-bold text-indigo-700 mb-8">DevMeet</div>
         <nav className="flex-1 space-y-2">
           {links.map(({ href, label, icon: Icon }) => (
@@ -108,9 +108,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </button>
       </aside>
 
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Topbar */}
-        <header className="flex items-center justify-between bg-white border-b border-slate-200 px-4 py-3 shadow-sm">
+        <header className="flex-shrink-0 flex items-center justify-between bg-white border-b border-slate-200 px-4 py-3 shadow-sm z-10">
           <div className="flex items-center gap-3 md:hidden">
             <button
               onClick={() => setDrawerOpen(true)}
@@ -122,35 +122,35 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <span className="text-xl font-bold text-indigo-700">DevMeet</span>
           </div>
           <div className="flex items-center gap-4 ml-auto">
-  <NotificationsDropdown />
-  <div className="flex items-center gap-3">
-    <img
-      src={
-        avatarUrl || "https://randomuser.me/api/portraits/men/32.jpg"
-      }
-      alt="User Avatar"
-      className="w-9 h-9 rounded-full border border-slate-200 bg-slate-100 object-cover"
-    />
-    <div className="hidden sm:block">
-      <div className="font-semibold text-slate-800">
-        {name || "User"}
-      </div>
-      <div className="text-xs text-slate-500">{email || "Email"}</div>
-    </div>
-  </div>
-  <button
-    onClick={onLogout}
-    className="flex items-center gap-1 px-3 py-2 rounded-lg text-red-600 font-medium hover:bg-red-50 transition-colors"
-  >
-    <LogOut className="w-4 h-4" />
-    <span className="hidden sm:inline">Logout</span>
-  </button>
-</div>
+            <NotificationsDropdown />
+            <div className="flex items-center gap-3">
+              <img
+                src={
+                  avatarUrl || "https://randomuser.me/api/portraits/men/32.jpg"
+                }
+                alt="User Avatar"
+                className="w-9 h-9 rounded-full border border-slate-200 bg-slate-100 object-cover"
+              />
+              <div className="hidden sm:block">
+                <div className="font-semibold text-slate-800">
+                  {name || "User"}
+                </div>
+                <div className="text-xs text-slate-500">{email || "Email"}</div>
+              </div>
+            </div>
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-1 px-3 py-2 rounded-lg text-red-600 font-medium hover:bg-red-50 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
+          </div>
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full">
-          {children}
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-6 md:p-10 max-w-7xl mx-auto w-full">{children}</div>
         </main>
       </div>
     </div>
