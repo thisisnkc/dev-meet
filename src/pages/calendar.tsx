@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
   Search,
-  Bell,
   Plus,
   Clock,
   Video,
@@ -17,7 +16,6 @@ import {
   format,
   addDays,
   startOfWeek,
-  endOfWeek,
   subWeeks,
   addWeeks,
   isSameDay,
@@ -40,7 +38,6 @@ interface Meeting {
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [view, setView] = useState<"day" | "week" | "month">("week");
 
@@ -55,11 +52,11 @@ export default function CalendarPage() {
 
   useEffect(() => {
     fetchMeetings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]); // Fetch when week changes
 
   const fetchMeetings = async () => {
     try {
-      setLoading(true);
       const userStr = localStorage.getItem("user");
       if (!userStr) return;
       const user = JSON.parse(userStr);
@@ -76,12 +73,17 @@ export default function CalendarPage() {
     } catch (error) {
       console.error("Failed to fetch meetings", error);
       toast.error("Failed to load meetings");
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleCreateMeeting = async (data: any) => {
+  const handleCreateMeeting = async (data: {
+    title: string;
+    date: string;
+    from: string;
+    to: string;
+    description?: string;
+    attendees: string[];
+  }) => {
     try {
       const userStr = localStorage.getItem("user");
       if (!userStr) throw new Error("User not found");
@@ -108,7 +110,7 @@ export default function CalendarPage() {
       const result = await res.json();
       setMeetings((prev) => [...prev, result.booking]);
       toast.success("Meeting scheduled successfully!");
-    } catch (error) {
+    } catch {
       toast.error("Failed to schedule meeting");
     }
   };
@@ -244,7 +246,9 @@ export default function CalendarPage() {
               {["Day", "Week", "Month", "Year"].map((v) => (
                 <button
                   key={v}
-                  onClick={() => setView(v.toLowerCase() as any)}
+                  onClick={() =>
+                    setView(v.toLowerCase() as "day" | "week" | "month")
+                  }
                   className={`px-3 py-1 rounded-md transition-all ${
                     view === v.toLowerCase()
                       ? "bg-white shadow-sm text-slate-900 font-medium"

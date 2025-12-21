@@ -22,7 +22,7 @@ export default function handler(
   if (!res.socket.server.io) {
     debugLogger("🔌 Initializing Socket.io");
 
-    const httpServer: NetServer = res.socket.server as any;
+    const httpServer = res.socket.server as NetServer;
     const io = new SocketIOServer(httpServer, {
       path: "/api/socketio",
       transports: ["websocket"],

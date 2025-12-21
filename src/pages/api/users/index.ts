@@ -18,7 +18,12 @@ export default async function handler(
   }
 
   try {
-    const updateData: any = {};
+    const updateData: {
+      email?: string;
+      name?: string;
+      avatar?: number;
+      password?: string;
+    } = {};
 
     // Validate and prepare optional fields
     if (email) {

@@ -7,7 +7,16 @@ interface Props {
 
 declare global {
   interface Window {
-    JitsiMeetExternalAPI: any;
+    JitsiMeetExternalAPI: new (
+      domain: string,
+      options: Record<string, unknown>
+    ) => {
+      dispose?: () => void;
+      on?: (event: string, callback: (...args: unknown[]) => void) => void;
+      off?: (event: string, callback: (...args: unknown[]) => void) => void;
+      executeCommand?: (command: string, ...args: unknown[]) => void;
+      getParticipantsInfo?: () => Array<{ displayName: string }>;
+    };
   }
 }
 

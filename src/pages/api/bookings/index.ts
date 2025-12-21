@@ -113,7 +113,14 @@ export default async function handler(
         return res.status(400).json({ message: "Missing userId in query" });
       }
 
-      const whereClause: any = {
+      const whereClause: {
+        organizerId: string;
+        date?: {
+          gte?: Date;
+          lte?: Date;
+          lt?: Date;
+        };
+      } = {
         organizerId: userId,
       };
 

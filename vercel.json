@@ -1,0 +1,15 @@
+{
+    "buildCommand": "npm run build:prod",
+    "devCommand": "npm run dev",
+    "installCommand": "npm install",
+    "framework": "nextjs",
+    "outputDirectory": ".next",
+    "env": {
+        "NODE_ENV": "production"
+    },
+    "build": {
+        "env": {
+            "SKIP_ENV_VALIDATION": "1"
+        }
+    }
+}

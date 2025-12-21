@@ -8,26 +8,6 @@ import jwt from "jsonwebtoken";
 import { PhoneOff } from "lucide-react";
 import { genJitsiTokenPayload } from "@/utlis/constants";
 import { requireAuth, AuthUser } from "@/lib/auth";
-// Type declarations for Jitsi Meet API
-declare namespace JitsiMeetJS {
-  interface JitsiMeetExternalAPI {
-    dispose: () => void;
-    executeCommand: (command: string, ...args: unknown[]) => void;
-    getParticipantsInfo: () => Array<{ displayName: string }>;
-    on: (event: string, callback: JitsiEventCallback) => void;
-    off: (event: string, callback: JitsiEventCallback) => void;
-    addListener: (event: string, callback: JitsiEventCallback) => void;
-    removeListener: (event: string, callback: JitsiEventCallback) => void;
-  }
-}
-
-declare global {
-  interface Window {
-    JitsiMeetExternalAPI: any; // Using any to avoid type conflicts with Jitsi's global declaration
-  }
-}
-
-type JitsiEventCallback = (...args: unknown[]) => void;
 
 const MeetingPage = (props: { token: string; user?: AuthUser }) => {
   const router = useRouter();
@@ -81,23 +61,23 @@ const MeetingPage = (props: { token: string; user?: AuthUser }) => {
       const jitsiInstance = new window.JitsiMeetExternalAPI(domain, options);
       setIsConnecting(false);
 
-      // Add event listeners
-      jitsiInstance.on("participantJoined", () => {});
+      // Add event listeners with optional chaining
+      jitsiInstance.on?.("participantJoined", () => {});
 
-      jitsiInstance.on("participantLeft", () => {});
+      jitsiInstance.on?.("participantLeft", () => {});
 
-      jitsiInstance.on("videoConferenceJoined", () => {
+      jitsiInstance.on?.("videoConferenceJoined", () => {
         setIsConnecting(false);
       });
 
-      jitsiInstance.on("readyToClose", () => {
+      jitsiInstance.on?.("readyToClose", () => {
         handleDisconnect();
       });
 
       // Cleanup function
       return () => {
         if (jitsiInstance) {
-          jitsiInstance.dispose();
+          jitsiInstance.dispose?.();
         }
       };
     } catch (err) {
@@ -105,7 +85,7 @@ const MeetingPage = (props: { token: string; user?: AuthUser }) => {
       setError("Failed to initialize the meeting. Please try again.");
       setIsConnecting(false);
     }
-  }, [roomName, handleDisconnect]);
+  }, [roomName, handleDisconnect, props.token]);
 
   // Initialize Jitsi when script is loaded and container is ready
   useEffect(() => {

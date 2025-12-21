@@ -5,8 +5,9 @@
   "scripts": {
     "worker:notify": "ts-node src/queue/workers/notificationWorker.ts",
     "dev": "next dev",
-    "build": "next build",
-    "build:prod": "prisma generate && prisma migrate deploy && next build",
+    "build": "prisma generate && next build",
+    "build:prod": "prisma generate && next build",
+    "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint"
   },
@@ -51,6 +52,7 @@
     "@types/debug": "^4.1.12",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
+    "@types/nprogress": "^0.2.3",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8",
