@@ -5,6 +5,7 @@ import type { NextApiRequest } from "next";
 import { NextApiResponseServerIO } from "@/types/next";
 import debug from "debug";
 import { redis } from "@/lib/redis";
+import { initializeNotificationWorker } from "@/queue/workers/notificationWorker";
 
 export const config = {
   api: {
@@ -62,6 +63,9 @@ export default function handler(
     });
 
     res.socket.server.io = io;
+
+    // Initialize notification worker when server starts
+    initializeNotificationWorker();
   }
 
   res.end();
