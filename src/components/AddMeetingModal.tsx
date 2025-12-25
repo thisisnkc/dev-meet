@@ -29,15 +29,14 @@ interface AddMeetingModalProps {
     description?: string;
     attendees: string[];
   }) => Promise<void> | void;
-  loading?: boolean;
 }
 
 export default function AddMeetingModal({
   open,
   onOpenChange,
   onCreateMeeting,
-  loading,
 }: AddMeetingModalProps) {
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     date: new Date(),
@@ -107,6 +106,7 @@ export default function AddMeetingModal({
 
   useEffect(() => {
     if (open) {
+      // Reset logic...
       const now = new Date();
       const roundedMinutes = Math.ceil(now.getMinutes() / 30) * 30;
       now.setMinutes(roundedMinutes);
@@ -124,6 +124,7 @@ export default function AddMeetingModal({
 
       setTimeout(() => titleRef.current?.focus(), 100);
       setFormErrors({});
+      setLoading(false); // Ensure loading is reset on open
     }
   }, [open]);
 
@@ -139,27 +140,34 @@ export default function AddMeetingModal({
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    await onCreateMeeting({
-      title: formData.title,
-      date: formData.date.toISOString().split("T")[0],
-      from: formData.from,
-      to: formData.to,
-      description: formData.description || "",
-      attendees: emails,
-    });
+    try {
+      setLoading(true);
+      await onCreateMeeting({
+        title: formData.title,
+        date: formData.date.toISOString().split("T")[0],
+        from: formData.from,
+        to: formData.to,
+        description: formData.description || "",
+        attendees: emails,
+      });
 
-    setFormData({
-      title: "",
-      date: new Date(),
-      from: "",
-      to: "",
-      description: "",
-      attendees: [],
-    });
-    setEmails([]);
-    setAttendeeInput("");
+      setFormData({
+        title: "",
+        date: new Date(),
+        from: "",
+        to: "",
+        description: "",
+        attendees: [],
+      });
+      setEmails([]);
+      setAttendeeInput("");
 
-    onOpenChange(false);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Failed to create meeting", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

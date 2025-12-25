@@ -6,7 +6,9 @@ export const notificationQueue = new Bull("meeting-notifications", redisUrl, {
   redis: {
     maxRetriesPerRequest: 3,
     enableReadyCheck: false,
-    connectTimeout: 10000,
+    connectTimeout: 30000,
+    family: 0, // Auto-detect IPv4/IPv6
+    keepAlive: 30000,
     retryStrategy(times) {
       const delay = Math.min(times * 50, 2000);
       return delay;
