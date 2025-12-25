@@ -167,12 +167,8 @@ export default function LoginPage() {
                 )}
               </div>
 
-              <Button type="submit" className="w-full mt-2">
-                {loading ? (
-                  <Loader2Icon className="animate-spin" />
-                ) : (
-                  "Login In"
-                )}
+              <Button type="submit" className="w-full mt-2" disabled={loading}>
+                {loading ? <Loader2Icon className="animate-spin" /> : "Login"}
               </Button>
 
               <p className="text-sm text-center text-muted-foreground mt-4">

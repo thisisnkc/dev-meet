@@ -22,11 +22,20 @@ function createPrismaClient(): PrismaClient {
   //       { level: "warn", emit: "stdout" },
   //     ]
   //   : [{ level: "error", emit: "stdout" }],
+  const url = process.env.DATABASE_URL;
+
+  // Add connection timeouts for Neon DB cold starts
+  let databaseUrl = url;
+  if (url && !url.includes("connect_timeout")) {
+    const separator = url.includes("?") ? "&" : "?";
+    databaseUrl = `${url}${separator}connect_timeout=30&pool_timeout=30`;
+  }
+
   return new PrismaClient({
     // Connection pool configuration for production
     datasources: {
       db: {
-        url: process.env.DATABASE_URL,
+        url: databaseUrl,
       },
     },
   });

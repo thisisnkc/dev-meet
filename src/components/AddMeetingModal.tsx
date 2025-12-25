@@ -16,7 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2Icon } from "lucide-react";
 
 interface AddMeetingModalProps {
   open: boolean;
@@ -354,10 +354,7 @@ export default function AddMeetingModal({
 
           <Button type="submit" className="w-full mt-4" disabled={loading}>
             {loading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
-                <span>Creating...</span>
-              </div>
+              <Loader2Icon className="animate-spin" />
             ) : (
               "Create Meeting"
             )}
