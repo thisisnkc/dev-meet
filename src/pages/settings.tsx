@@ -115,9 +115,9 @@ export default function SettingsPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-6 space-y-8">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-3">
+            <CardContent className="p-4 sm:p-6 space-y-6 sm:space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-2 sm:space-y-3">
                   <Label
                     htmlFor="name"
                     className="text-sm font-medium text-slate-700"
@@ -131,12 +131,12 @@ export default function SettingsPage() {
                       value={localName}
                       onChange={(e) => setLocalName(e.target.value)}
                       placeholder="Enter your full name"
-                      className="pl-10 border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                      className="pl-10 border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 h-11"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <Label
                     htmlFor="email"
                     className="text-sm font-medium text-slate-700"
@@ -151,7 +151,7 @@ export default function SettingsPage() {
                       value={localEmail}
                       onChange={(e) => setLocalEmail(e.target.value)}
                       placeholder="you@example.com"
-                      className="pl-10 border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                      className="pl-10 border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 h-11"
                     />
                   </div>
                 </div>
@@ -161,7 +161,7 @@ export default function SettingsPage() {
                 <Label className="text-sm font-medium text-slate-700 block">
                   Profile Avatar
                 </Label>
-                <div className="bg-slate-50 p-6 rounded-xl border border-dashed border-slate-300">
+                <div className="bg-slate-50 p-4 sm:p-6 rounded-xl border border-dashed border-slate-300">
                   <div className="flex flex-wrap gap-6 justify-center sm:justify-start">
                     {Object.entries(avatarOptions).map(([key, url]) => (
                       <button

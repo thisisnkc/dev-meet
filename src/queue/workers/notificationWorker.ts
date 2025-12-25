@@ -25,6 +25,23 @@ export function initializeNotificationWorker() {
         `📧 Processing notification for user ${userId} - Meeting: ${title}`
       );
 
+      // Verify meeting still exists before notifying
+      // This "handles perfectly" the case where a meeting was deleted but the job remained in the queue
+      const existingBooking = await prisma.booking.findFirst({
+        where: {
+          meetingId: meetingId, // Using the unique meeting code/ID
+          organizerId: userId,
+        },
+      });
+
+      if (!existingBooking) {
+        console.log(
+          `⚠️ Meeting ${meetingId} no longer exists. Skipping notification.`
+        );
+        done();
+        return;
+      }
+
       // Save notification to DB
       const notification = await prisma.notification.create({
         data: {

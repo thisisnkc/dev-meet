@@ -1,3 +1,4 @@
+// pages/_app.tsx
 import "@/styles/globals.css";
 import "@/styles/nprogress.css";
 import "nprogress/nprogress.css";
@@ -8,7 +9,7 @@ import { useRouter } from "next/router";
 import { useAtom } from "jotai";
 import { useEffect, useState, useMemo } from "react";
 import { avatarAtom, emailAtom, nameAtom } from "@/state/atoms";
-import { SocketProvider } from "@/context/SocketContext";
+import { PusherProvider } from "@/context/PusherContext";
 
 NProgress.configure({
   minimum: 0.2,
@@ -83,9 +84,9 @@ export default function App({ Component, pageProps }: AppProps) {
   const userId = useUserState();
 
   return (
-    <SocketProvider userId={userId}>
+    <PusherProvider userId={userId}>
       <Toaster />
       <Component {...pageProps} />
-    </SocketProvider>
+    </PusherProvider>
   );
 }

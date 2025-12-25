@@ -353,7 +353,14 @@ export default function AddMeetingModal({
           </div>
 
           <Button type="submit" className="w-full mt-4" disabled={loading}>
-            {loading ? "Creating..." : "Create Meeting"}
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                <span>Creating...</span>
+              </div>
+            ) : (
+              "Create Meeting"
+            )}
           </Button>
         </form>
       </DialogContent>

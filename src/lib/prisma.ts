@@ -13,17 +13,16 @@ declare global {
  * Creates a new PrismaClient instance with environment-specific configuration
  */
 function createPrismaClient(): PrismaClient {
-  const isDevelopment = process.env.NODE_ENV === "development";
+  // const isDevelopment = process.env.NODE_ENV === "development";
 
+  // log: isDevelopment
+  //   ? [
+  //       { level: "query", emit: "event" },
+  //       { level: "error", emit: "stdout" },
+  //       { level: "warn", emit: "stdout" },
+  //     ]
+  //   : [{ level: "error", emit: "stdout" }],
   return new PrismaClient({
-    log: isDevelopment
-      ? [
-          { level: "query", emit: "event" },
-          { level: "error", emit: "stdout" },
-          { level: "warn", emit: "stdout" },
-        ]
-      : [{ level: "error", emit: "stdout" }],
-
     // Connection pool configuration for production
     datasources: {
       db: {

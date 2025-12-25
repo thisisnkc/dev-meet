@@ -1,14 +1,15 @@
 // src/pages/dashboard.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
-  Copy,
-  Share2,
   PlusCircle,
   ExternalLink,
   Calendar,
   Users,
   Clock,
+  CalendarPlus,
+  TrendingUp,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,13 @@ import AddMeetingModal from "@/components/AddMeetingModal";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { joinMeeting } from "@/utlis/constants";
+import {
+  format,
+  isToday,
+  isTomorrow,
+  differenceInMinutes,
+  parseISO,
+} from "date-fns";
 
 interface Attendee {
   id: string;
@@ -39,7 +47,6 @@ export interface Stats {
 }
 
 export default function DashboardPage() {
-  const [bookingUrl, setBookingUrl] = useState("");
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +55,6 @@ export default function DashboardPage() {
     slotsFilled: 0,
     attendees: 0,
   });
-  const [copySuccess, setCopySuccess] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
   const router = useRouter();
@@ -78,7 +84,6 @@ export default function DashboardPage() {
               0
             ) || 0,
         });
-        setBookingUrl(`https://devmeet.com/book/${user.email?.split("@")[0]}`);
       } catch (err) {
         if (err instanceof Error) setError(err.message);
         else setError("Unknown error");
@@ -89,11 +94,38 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(bookingUrl);
-    setCopySuccess(true);
-    toast.success("Link copied!");
-    setTimeout(() => setCopySuccess(false), 2000);
+  // Get next upcoming meeting
+  const nextMeeting = useMemo(() => {
+    const now = new Date();
+    const upcoming = meetings
+      .filter((m) => {
+        const meetingDateTime = parseISO(`${m.date.split("T")[0]}T${m.from}`);
+        return meetingDateTime > now;
+      })
+      .sort((a, b) => {
+        const dateA = parseISO(`${a.date.split("T")[0]}T${a.from}`);
+        const dateB = parseISO(`${b.date.split("T")[0]}T${b.from}`);
+        return dateA.getTime() - dateB.getTime();
+      });
+    return upcoming[0] || null;
+  }, [meetings]);
+
+  // Get today's meetings
+  const todaysMeetings = useMemo(() => {
+    return meetings.filter((m) => isToday(parseISO(m.date)));
+  }, [meetings]);
+
+  // Calculate time until next meeting
+  const getTimeUntilMeeting = (meeting: Meeting) => {
+    const meetingDateTime = parseISO(
+      `${meeting.date.split("T")[0]}T${meeting.from}`
+    );
+    const now = new Date();
+    const minutes = differenceInMinutes(meetingDateTime, now);
+
+    if (minutes < 60) return `in ${minutes}m`;
+    if (minutes < 1440) return `in ${Math.floor(minutes / 60)}h`;
+    return `in ${Math.floor(minutes / 1440)}d`;
   };
 
   const handleCreateMeeting = async (data: {
@@ -165,14 +197,14 @@ export default function DashboardPage() {
               Manage your meetings and availability
             </p>
           </div>
-          <Button
+          {/* <Button
             onClick={() => setModalOpen(true)}
             size="lg"
             className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/30"
           >
             <PlusCircle className="w-5 h-5 mr-2" />
             Create Meeting
-          </Button>
+          </Button> */}
         </div>
 
         {/* Stats Cards */}
@@ -226,32 +258,130 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Booking Link */}
-        <Card className="border-slate-200 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Share2 className="w-5 h-5 text-indigo-600" />
-              Your Booking Link
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
-                <p className="text-sm text-slate-700 font-mono break-all">
-                  {bookingUrl || "Loading..."}
+        {/* Next Meeting Preview & Quick Actions */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Next Meeting Card */}
+          {nextMeeting ? (
+            <Card className="border-slate-200 shadow-lg bg-gradient-to-br from-slate-50 to-indigo-50 overflow-hidden relative">
+              <CardContent className="p-6">
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-slate-600 text-sm font-medium flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-indigo-600" />
+                      Next Meeting
+                    </h3>
+                    <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-medium">
+                      {getTimeUntilMeeting(nextMeeting)}
+                    </span>
+                  </div>
+
+                  <h4 className="text-xl font-bold mb-2 line-clamp-1 text-slate-900">
+                    {nextMeeting.title}
+                  </h4>
+
+                  <div className="flex flex-col gap-1.5 text-sm text-slate-600 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>
+                        {isToday(parseISO(nextMeeting.date))
+                          ? "Today"
+                          : isTomorrow(parseISO(nextMeeting.date))
+                          ? "Tomorrow"
+                          : format(parseISO(nextMeeting.date), "MMM d")}
+                      </span>
+                      <span className="mx-1">•</span>
+                      <span>
+                        {nextMeeting.from} - {nextMeeting.to}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>
+                        {nextMeeting.attendees?.length || 0} attendees
+                      </span>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={() => joinMeeting()}
+                    className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Join Now
+                  </Button>
+                </div>
+
+                {/* Decorative BG */}
+                <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-indigo-200/30 blur-3xl rounded-full pointer-events-none" />
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-2 border-dashed border-slate-300 bg-slate-50">
+              <CardContent className="p-6 flex flex-col items-center justify-center text-center h-full min-h-[200px]">
+                <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mb-3">
+                  <Calendar className="w-6 h-6 text-slate-400" />
+                </div>
+                <p className="text-slate-600 font-medium mb-1">
+                  No upcoming meetings
                 </p>
-              </div>
+                <p className="text-sm text-slate-500">
+                  Schedule your next meeting
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Quick Actions Card */}
+          <Card className="border-slate-200 shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-indigo-600" />
+                Quick Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
               <Button
-                onClick={handleCopy}
-                disabled={!bookingUrl}
+                onClick={() => setModalOpen(true)}
+                className="w-full justify-start bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
                 variant="outline"
               >
-                <Copy className="w-4 h-4 mr-2" />
-                {copySuccess ? "Copied!" : "Copy"}
+                <CalendarPlus className="w-4 h-4 mr-2" />
+                Schedule New Meeting
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+
+              <Button
+                onClick={() => router.push("/calendar")}
+                className="w-full justify-start"
+                variant="outline"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                View Calendar
+                <ArrowRight className="w-4 h-4 ml-auto" />
+              </Button>
+
+              {/* Today's Summary */}
+              <div className="pt-3 border-t border-slate-200">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 font-medium">
+                    Today&apos;s Meetings
+                  </span>
+                  <span className="text-2xl font-bold text-slate-900">
+                    {todaysMeetings.length}
+                  </span>
+                </div>
+                {todaysMeetings.length > 0 && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    {todaysMeetings.reduce(
+                      (sum, m) => sum + (m.attendees?.length || 0),
+                      0
+                    )}{" "}
+                    total attendees
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Meetings Section */}
         <section>
@@ -259,9 +389,22 @@ export default function DashboardPage() {
             <h2 className="text-2xl font-bold text-slate-900">
               Upcoming Meetings
             </h2>
-            {meetings.length > 0 && (
+            {meetings.filter((m) => {
+              const meetingDateTime = parseISO(
+                `${m.date.split("T")[0]}T${m.from}`
+              );
+              return meetingDateTime > new Date();
+            }).length > 0 && (
               <span className="text-sm text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
-                {meetings.length} scheduled
+                {
+                  meetings.filter((m) => {
+                    const meetingDateTime = parseISO(
+                      `${m.date.split("T")[0]}T${m.from}`
+                    );
+                    return meetingDateTime > new Date();
+                  }).length
+                }{" "}
+                scheduled
               </span>
             )}
           </div>
@@ -276,7 +419,12 @@ export default function DashboardPage() {
                 <p className="text-red-600">{error}</p>
               </CardContent>
             </Card>
-          ) : meetings.length === 0 ? (
+          ) : meetings.filter((m) => {
+              const meetingDateTime = parseISO(
+                `${m.date.split("T")[0]}T${m.from}`
+              );
+              return meetingDateTime > new Date();
+            }).length === 0 ? (
             <Card className="border-dashed border-2 border-slate-300 bg-slate-50/50">
               <CardContent className="p-16 text-center">
                 <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -295,67 +443,105 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid md:grid-cols-2 gap-4">
-              {meetings.map((meeting) => (
-                <Card
-                  key={meeting.id}
-                  className="border-slate-200 hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg font-semibold text-slate-900 mb-2">
-                          {meeting.title}
-                        </CardTitle>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {meetings
+                .filter((m) => {
+                  const meetingDateTime = parseISO(
+                    `${m.date.split("T")[0]}T${m.from}`
+                  );
+                  return meetingDateTime > new Date();
+                })
+                .sort((a, b) => {
+                  const dateA = parseISO(`${a.date.split("T")[0]}T${a.from}`);
+                  const dateB = parseISO(`${b.date.split("T")[0]}T${b.from}`);
+                  return dateA.getTime() - dateB.getTime();
+                })
+                .map((meeting) => {
+                  const meetingDateTime = parseISO(
+                    `${meeting.date.split("T")[0]}T${meeting.from}`
+                  );
+                  const minutesUntil = differenceInMinutes(
+                    meetingDateTime,
+                    new Date()
+                  );
+                  const isStartingSoon = minutesUntil < 60 && minutesUntil > 0;
+
+                  return (
+                    <Card
+                      key={meeting.id}
+                      className={`border-slate-200 hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${
+                        isStartingSoon
+                          ? "ring-2 ring-indigo-500 ring-offset-2"
+                          : ""
+                      }`}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <CardTitle className="text-lg font-semibold text-slate-900 line-clamp-2 flex-1">
+                            {meeting.title}
+                          </CardTitle>
+                          {isStartingSoon && (
+                            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-medium whitespace-nowrap">
+                              Starting soon
+                            </span>
+                          )}
+                        </div>
                         <div className="flex flex-col gap-2 text-sm text-slate-600">
                           <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-indigo-600" />
+                            <Calendar className="w-4 h-4 text-indigo-600 flex-shrink-0" />
                             <span>
-                              {new Date(meeting.date).toLocaleDateString()}
+                              {isToday(parseISO(meeting.date))
+                                ? "Today"
+                                : isTomorrow(parseISO(meeting.date))
+                                ? "Tomorrow"
+                                : format(parseISO(meeting.date), "MMM d, yyyy")}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-emerald-600" />
+                            <Clock className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                             <span>
                               {meeting.from} - {meeting.to}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Users className="w-4 h-4 text-violet-600" />
+                            <Users className="w-4 h-4 text-violet-600 flex-shrink-0" />
                             <span>
                               {meeting.attendees?.length || 0} attendee
                               {meeting.attendees?.length !== 1 ? "s" : ""}
                             </span>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => joinMeeting()}
-                        className="flex-1"
-                      >
-                        <ExternalLink className="w-4 h-4 mr-1" />
-                        Join
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          router.push(
-                            `/calendar?date=${meeting.date.split("T")[0]}`
-                          )
-                        }
-                      >
-                        Details
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="grid grid-cols-2 gap-3">
+                          <Button
+                            size="sm"
+                            onClick={() => joinMeeting()}
+                            className="w-full bg-slate-900 hover:bg-slate-800 text-white"
+                          >
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            Join
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              router.push(
+                                `/calendar?date=${
+                                  meeting.date.split("T")[0]
+                                }&time=${meeting.from}`
+                              )
+                            }
+                            className="w-full"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 mr-2" />
+                            Details
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
             </div>
           )}
         </section>
