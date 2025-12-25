@@ -28,7 +28,7 @@ function createPrismaClient(): PrismaClient {
   let databaseUrl = url;
   if (url && !url.includes("connect_timeout")) {
     const separator = url.includes("?") ? "&" : "?";
-    databaseUrl = `${url}${separator}connect_timeout=30&pool_timeout=30`;
+    databaseUrl = `${url}${separator}connect_timeout=60&pool_timeout=60`;
   }
 
   return new PrismaClient({
