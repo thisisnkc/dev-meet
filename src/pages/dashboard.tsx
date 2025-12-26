@@ -225,11 +225,11 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600 text-white overflow-hidden relative">
+          <Card className="border-none shadow-lg bg-gradient-to-br from-indigo-500 to-indigo-600 text-white overflow-hidden relative">
             <CardContent className="p-6">
               <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-emerald-100 text-sm font-medium">
+                  <p className="text-indigo-100 text-sm font-medium">
                     Slots Filled
                   </p>
                   <p className="text-4xl font-bold mt-2">{stats.slotsFilled}</p>
@@ -241,11 +241,11 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-lg bg-gradient-to-br from-violet-500 to-violet-600 text-white overflow-hidden relative">
+          <Card className="border-none shadow-lg bg-gradient-to-br from-indigo-500 to-indigo-600 text-white overflow-hidden relative">
             <CardContent className="p-6">
               <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-violet-100 text-sm font-medium">
+                  <p className="text-indigo-100 text-sm font-medium">
                     Total Attendees
                   </p>
                   <p className="text-4xl font-bold mt-2">{stats.attendees}</p>
@@ -342,10 +342,9 @@ export default function DashboardPage() {
             <CardContent className="space-y-3">
               <Button
                 onClick={() => setModalOpen(true)}
-                className="w-full justify-start bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
-                variant="outline"
+                className="w-full justify-start h-10 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md transition-all rounded-xl"
               >
-                <CalendarPlus className="w-4 h-4 mr-2" />
+                <CalendarPlus className="w-5 h-5 mr-2" />
                 Schedule New Meeting
               </Button>
 

@@ -1,21 +1,14 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { initializeNotificationWorker } from "@/queue/workers/notificationWorker";
-
-// Initialize worker on first API call
-let initialized = false;
+// Worker initialization removed - now runs as standalone service
+// import { initializeNotificationWorker } from "@/queue/workers/notificationWorker";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (!initialized) {
-    initializeNotificationWorker();
-    initialized = true;
-  }
-
   return res.status(200).json({
     status: "ok",
-    worker: "initialized",
+    message: "API is healthy. Worker runs as standalone service.",
     timestamp: new Date().toISOString(),
   });
 }

@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "worker:notify": "ts-node src/queue/workers/notificationWorker.ts",
     "dev": "next dev",
     "build": "prisma generate && next build",
     "build:prod": "prisma generate && next build",

@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: devmeet
+      POSTGRES_PASSWORD: devmeet123
+      POSTGRES_DB: devmeet
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - devmeet-network
+
+  # Redis Queue
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - devmeet-network
+
+  # Notification Worker
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://devmeet:devmeet123@postgres:5432/devmeet
+      - REDIS_URL=redis://redis:6379
+      - NEXT_PUBLIC_BASE_URL=http://localhost:3000
+      - NODE_ENV=development
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - devmeet-network
+
+networks:
+  devmeet-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:

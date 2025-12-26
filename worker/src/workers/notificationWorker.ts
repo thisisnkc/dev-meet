@@ -1,5 +1,5 @@
-import { notificationQueue } from "../notificationQueue";
-import { prisma } from "@/lib/prisma";
+import { notificationQueue } from "../queue/notificationQueue";
+import { prisma } from "../lib/prisma";
 import axios from "axios";
 
 let isWorkerInitialized = false;
@@ -99,13 +99,12 @@ export function initializeNotificationWorker() {
 }
 
 // Graceful shutdown
-if (process.env.NODE_ENV === "production") {
-  const cleanup = async () => {
-    console.log("🛑 Shutting down notification worker...");
-    await notificationQueue.close();
-    process.exit(0);
-  };
+const cleanup = async () => {
+  console.log("🛑 Shutting down notification worker...");
+  await notificationQueue.close();
+  await prisma.$disconnect();
+  process.exit(0);
+};
 
-  process.on("SIGINT", cleanup);
-  process.on("SIGTERM", cleanup);
-}
+process.on("SIGINT", cleanup);
+process.on("SIGTERM", cleanup);
