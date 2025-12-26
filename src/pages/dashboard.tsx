@@ -533,7 +533,6 @@ export default function DashboardPage() {
                             }
                             className="w-full"
                           >
-                            <ExternalLink className="w-3.5 h-3.5 mr-2" />
                             Details
                           </Button>
                         </div>

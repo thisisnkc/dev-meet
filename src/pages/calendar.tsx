@@ -55,23 +55,45 @@ export default function CalendarPage() {
   const startDate = weekDays[0];
   const endDate = weekDays[6];
 
-  // Auto-scroll to time if specified in URL
+  // Handle ID/Date/Time from URL
   useEffect(() => {
-    if (router.query.time && scrollContainerRef.current) {
-      const timeStr = router.query.time as string; // HH:mm
+    if (!router.isReady) return;
+
+    // 1. Set Date if present
+    if (router.query.date) {
+      const dateStr = router.query.date as string;
+      const parsedDate = parse(dateStr, "yyyy-MM-dd", new Date());
+      // Check if valid date
+      if (!isNaN(parsedDate.getTime())) {
+        setCurrentDate(parsedDate);
+      }
+    }
+  }, [router.isReady, router.query.date]);
+
+  // Auto-scroll to time
+  useEffect(() => {
+    if (!router.isReady || !scrollContainerRef.current) return;
+
+    if (router.query.time) {
+      const timeStr = router.query.time as string;
       const [hours, minutes] = timeStr.split(":").map(Number);
 
-      const HOUR_HEIGHT = 130;
-      // Calculate position: (hours + minutes/60) * height
-      // Subtract strict padding (e.g. 50px) to show a bit of context above the event
-      const scrollTop = (hours + minutes / 60) * HOUR_HEIGHT - 50;
+      if (!isNaN(hours)) {
+        const HOUR_HEIGHT = 130;
+        const scrollTop = (hours + (minutes || 0) / 60) * HOUR_HEIGHT - 100; // 100px padding
 
-      scrollContainerRef.current.scrollTo({
-        top: Math.max(0, scrollTop),
-        behavior: "smooth",
-      });
+        // Use setTimeout to ensure DOM is rendered (especially if week changed)
+        const timer = setTimeout(() => {
+          scrollContainerRef.current?.scrollTo({
+            top: Math.max(0, scrollTop),
+            behavior: "smooth",
+          });
+        }, 300);
+
+        return () => clearTimeout(timer);
+      }
     }
-  }, [router.query.time, meetings]); // Run when time param exists or meetings load
+  }, [router.isReady, router.query.time, currentDate, meetings.length]); // Re-run if date changes (new week rendered)
 
   useEffect(() => {
     fetchMeetings();
@@ -406,12 +428,13 @@ export default function CalendarPage() {
 
         {/* Week View Grid */}
         <div className="flex-1 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col min-h-0">
-          {/* Header Row */}
-          <div className="overflow-x-auto">
+          {/* Main Scroll Container (Handles both X and Y scroll) */}
+          <div ref={scrollContainerRef} className="overflow-auto h-full flex-1">
             <div className="min-w-[800px]">
-              <div className="grid grid-cols-8 border-b border-slate-200 bg-white z-10 sticky top-0">
+              {/* Header Row - Sticky Top */}
+              <div className="grid grid-cols-8 border-b border-slate-200 bg-white z-20 sticky top-0">
                 {/* Time Column Header */}
-                <div className="col-span-1 border-r border-slate-100 flex items-center justify-center p-4">
+                <div className="col-span-1 border-r border-slate-100 flex items-center justify-center p-4 bg-white/95 backdrop-blur">
                   <span className="text-xs font-semibold text-slate-400">
                     IST
                   </span>
@@ -422,7 +445,9 @@ export default function CalendarPage() {
                   <div
                     key={day.toISOString()}
                     className={`col-span-1 p-4 border-r border-slate-100 text-center last:border-r-0 ${
-                      isSameDay(day, new Date()) ? "bg-indigo-50/50" : ""
+                      isSameDay(day, new Date())
+                        ? "bg-indigo-50/50"
+                        : "bg-white/95 backdrop-blur"
                     }`}
                   >
                     <div
@@ -448,10 +473,7 @@ export default function CalendarPage() {
               </div>
 
               {/* Scrollable Grid Body */}
-              <div
-                ref={scrollContainerRef}
-                className="overflow-y-auto relative h-[calc(100vh-320px)] sm:h-auto"
-              >
+              <div className="relative">
                 <div className="grid grid-cols-8 relative min-h-[1920px]">
                   {/* Time Column */}
                   <div className="col-span-1 border-r border-slate-100 bg-slate-50/30">

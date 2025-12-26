@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, isToday } from "date-fns";
 import {
   Popover,
   PopoverContent,
@@ -106,14 +106,19 @@ export default function AddMeetingModal({
 
   useEffect(() => {
     if (open) {
-      // Reset logic...
+      // Calculate next available slot (next full hour)
+      // Example: 22:37 -> from: 23:00, to: 23:30
+      // Example: 22:00 -> from: 23:00, to: 23:30 (always suggest next hour for buffer)
       const now = new Date();
-      const roundedMinutes = Math.ceil(now.getMinutes() / 30) * 30;
-      now.setMinutes(roundedMinutes);
-      const defaultToTime = now.toTimeString().slice(0, 5);
+      now.setHours(now.getHours() + 1);
+      now.setMinutes(0, 0, 0); // Reset to :00
 
-      now.setMinutes(roundedMinutes - 30);
-      const defaultFromTime = now.toTimeString().slice(0, 5);
+      const defaultFromTime = format(now, "HH:mm");
+
+      // Default duration: 30 minutes
+      const toDate = new Date(now);
+      toDate.setMinutes(toDate.getMinutes() + 30);
+      const defaultToTime = format(toDate, "HH:mm");
 
       setFormData((prev) => ({
         ...prev,
@@ -124,7 +129,7 @@ export default function AddMeetingModal({
 
       setTimeout(() => titleRef.current?.focus(), 100);
       setFormErrors({});
-      setLoading(false); // Ensure loading is reset on open
+      setLoading(false);
     }
   }, [open]);
 
@@ -136,6 +141,28 @@ export default function AddMeetingModal({
     if (!formData.from.trim()) errors.from = "Start time is required";
     if (!formData.to.trim()) errors.to = "End time is required";
     if (!emails.length) errors.attendees = "At least one attendee is required";
+
+    // Validate Time Logic
+    if (formData.from && formData.to) {
+      const [fromH, fromM] = formData.from.split(":").map(Number);
+      const [toH, toM] = formData.to.split(":").map(Number);
+
+      const fromTime = fromH * 60 + fromM;
+      const toTime = toH * 60 + toM;
+
+      if (fromTime >= toTime) {
+        errors.to = "End time must be after start time";
+      }
+
+      // Check if time is in the past (only if selected date is today)
+      if (formData.date && isToday(formData.date)) {
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        if (fromTime < currentMinutes) {
+          errors.from = "Start time cannot be in the past";
+        }
+      }
+    }
 
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
