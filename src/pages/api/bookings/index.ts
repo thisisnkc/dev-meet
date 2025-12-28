@@ -70,7 +70,7 @@ export default async function handler(
       });
 
       const scheduledDateTime = moment.tz(`${date}T${from}`, "Asia/Kolkata");
-      const notifyAt = scheduledDateTime.clone().subtract(1, "minutes");
+      const notifyAt = scheduledDateTime.clone().subtract(10, "minutes");
       const delay = Math.max(notifyAt.diff(moment()), 0);
 
       if (delay > 0) {

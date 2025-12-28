@@ -12,6 +12,7 @@ import {
   FileText,
   Trash2,
   Video,
+  ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
 import { joinMeeting } from "@/utlis/constants";
@@ -24,6 +25,7 @@ interface EventDetailsModalProps {
     title: string;
     date: string;
     from: string;
+    meetingId: string;
     to: string;
     description?: string;
     attendees: { id: string; email: string }[];
@@ -43,6 +45,8 @@ export default function EventDetailsModal({
   const [isConfirming, setIsConfirming] = useState(false);
 
   if (!meeting) return null;
+  const isPast =
+    new Date(`${meeting.date.split("T")[0]}T${meeting.to}`) < new Date();
 
   const performDelete = async () => {
     setDeleting(true);
@@ -110,10 +114,12 @@ export default function EventDetailsModal({
             <div className="flex-1">
               <div className="font-semibold text-slate-900">Meeting Link</div>
               <Button
-                onClick={() => joinMeeting()}
-                className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+                onClick={() => joinMeeting(meeting.meetingId)}
+                disabled={isPast}
+                className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white disabled:bg-blue-300 disabled:text-black disabled:cursor-not-allowed"
               >
-                Join Meeting
+                {isPast ? "Meeting Ended" : "Join Meeting"}
+                {!isPast && <ExternalLink className="w-4 h-4 ml-2" />}
               </Button>
             </div>
           </div>
@@ -156,7 +162,11 @@ export default function EventDetailsModal({
           )}
 
           <div className="pt-4 border-t border-slate-100 flex justify-end">
-            {!isConfirming ? (
+            {isPast ? (
+              <p className="text-sm text-slate-500 italic">
+                Past meetings cannot be canceled
+              </p>
+            ) : !isConfirming ? (
               <Button
                 variant="destructive"
                 onClick={() => setIsConfirming(true)}

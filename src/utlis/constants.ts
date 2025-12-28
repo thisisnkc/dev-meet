@@ -15,7 +15,10 @@ export const genSixDigitOtp = () => {
 };
 
 export const joinMeeting = (meetingId?: string) => {
-  if (!meetingId) meetingId = genRandomMeetingId();
+  if (!meetingId) {
+    console.error("Meeting ID is required to join a meeting.");
+    return;
+  }
   const meetingUrl = `/meeting/${meetingId}`;
 
   const fullUrl = `${window.location.origin}${meetingUrl}`;

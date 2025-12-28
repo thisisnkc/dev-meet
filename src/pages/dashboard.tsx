@@ -32,6 +32,7 @@ interface Attendee {
 
 interface Meeting {
   id: string;
+  meetingId: string;
   title: string;
   date: string;
   from: string;
@@ -99,8 +100,8 @@ export default function DashboardPage() {
     const now = new Date();
     const upcoming = meetings
       .filter((m) => {
-        const meetingDateTime = parseISO(`${m.date.split("T")[0]}T${m.from}`);
-        return meetingDateTime > now;
+        const meetingEndDateTime = parseISO(`${m.date.split("T")[0]}T${m.to}`);
+        return meetingEndDateTime > now;
       })
       .sort((a, b) => {
         const dateA = parseISO(`${a.date.split("T")[0]}T${a.from}`);
@@ -120,9 +121,20 @@ export default function DashboardPage() {
     const meetingDateTime = parseISO(
       `${meeting.date.split("T")[0]}T${meeting.from}`
     );
+    const meetingEndDateTime = parseISO(
+      `${meeting.date.split("T")[0]}T${meeting.to}`
+    );
     const now = new Date();
+
+    // Check if ongoing
+    if (now >= meetingDateTime && now <= meetingEndDateTime) {
+      return "Happening Now";
+    }
+
     const minutes = differenceInMinutes(meetingDateTime, now);
 
+    if (minutes < 0) return `Started ${Math.abs(minutes)}m ago`;
+    if (minutes === 0) return "Starting now";
     if (minutes < 60) return `in ${minutes}m`;
     if (minutes < 1440) return `in ${Math.floor(minutes / 60)}h`;
     return `in ${Math.floor(minutes / 1440)}d`;
@@ -171,7 +183,7 @@ export default function DashboardPage() {
       }));
 
       toast.success("Meeting created!", {
-        description: "Reminder set for 1 minute before start time.",
+        description: "Reminder set for 10 minutes before start time.",
       });
     } catch (err) {
       if (err instanceof Error) {
@@ -303,11 +315,11 @@ export default function DashboardPage() {
                   </div>
 
                   <Button
-                    onClick={() => joinMeeting()}
+                    onClick={() => joinMeeting(nextMeeting.meetingId)}
                     className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
                   >
-                    <ExternalLink className="w-4 h-4 mr-2" />
                     Join Now
+                    <ExternalLink className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
 
@@ -389,18 +401,18 @@ export default function DashboardPage() {
               Upcoming Meetings
             </h2>
             {meetings.filter((m) => {
-              const meetingDateTime = parseISO(
-                `${m.date.split("T")[0]}T${m.from}`
+              const meetingEndDateTime = parseISO(
+                `${m.date.split("T")[0]}T${m.to}`
               );
-              return meetingDateTime > new Date();
+              return meetingEndDateTime > new Date();
             }).length > 0 && (
               <span className="text-sm text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
                 {
                   meetings.filter((m) => {
-                    const meetingDateTime = parseISO(
-                      `${m.date.split("T")[0]}T${m.from}`
+                    const meetingEndDateTime = parseISO(
+                      `${m.date.split("T")[0]}T${m.to}`
                     );
-                    return meetingDateTime > new Date();
+                    return meetingEndDateTime > new Date();
                   }).length
                 }{" "}
                 scheduled
@@ -419,10 +431,10 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           ) : meetings.filter((m) => {
-              const meetingDateTime = parseISO(
-                `${m.date.split("T")[0]}T${m.from}`
+              const meetingEndDateTime = parseISO(
+                `${m.date.split("T")[0]}T${m.to}`
               );
-              return meetingDateTime > new Date();
+              return meetingEndDateTime > new Date();
             }).length === 0 ? (
             <Card className="border-dashed border-2 border-slate-300 bg-slate-50/50">
               <CardContent className="p-16 text-center">
@@ -445,10 +457,10 @@ export default function DashboardPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {meetings
                 .filter((m) => {
-                  const meetingDateTime = parseISO(
-                    `${m.date.split("T")[0]}T${m.from}`
+                  const meetingEndDateTime = parseISO(
+                    `${m.date.split("T")[0]}T${m.to}`
                   );
-                  return meetingDateTime > new Date();
+                  return meetingEndDateTime > new Date();
                 })
                 .sort((a, b) => {
                   const dateA = parseISO(`${a.date.split("T")[0]}T${a.from}`);
@@ -515,11 +527,11 @@ export default function DashboardPage() {
                         <div className="grid grid-cols-2 gap-3">
                           <Button
                             size="sm"
-                            onClick={() => joinMeeting()}
+                            onClick={() => joinMeeting(meeting.meetingId)}
                             className="w-full bg-slate-900 hover:bg-slate-800 text-white"
                           >
-                            <ExternalLink className="w-4 h-4 mr-2" />
                             Join
+                            <ExternalLink className="w-4 h-4 ml-2" />
                           </Button>
                           <Button
                             variant="outline"

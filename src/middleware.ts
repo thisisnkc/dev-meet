@@ -12,7 +12,12 @@ export function middleware(request: NextRequest) {
   }
 
   // public prefixes - APIs and public assets
-  const publicPrefixes = ["/api/users", "/api/health"];
+  const publicPrefixes = [
+    "/api/users",
+    "/api/health",
+    "/meeting",
+    "/api/meeting",
+  ];
   if (publicPrefixes.some((prefix) => pathname.startsWith(prefix))) {
     return NextResponse.next();
   }
