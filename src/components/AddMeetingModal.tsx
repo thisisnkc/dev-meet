@@ -110,8 +110,12 @@ export default function AddMeetingModal({
       // Example: 22:37 -> from: 23:00, to: 23:30
       // Example: 22:00 -> from: 23:00, to: 23:30 (always suggest next hour for buffer)
       const now = new Date();
-      now.setHours(now.getHours() + 1);
-      now.setMinutes(0, 0, 0); // Reset to :00
+      if (now.getMinutes() < 30) {
+        now.setMinutes(30, 0, 0);
+      } else {
+        now.setHours(now.getHours() + 1);
+        now.setMinutes(0, 0, 0);
+      }
 
       const defaultFromTime = format(now, "HH:mm");
 
@@ -158,7 +162,8 @@ export default function AddMeetingModal({
       if (formData.date && isToday(formData.date)) {
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        if (fromTime < currentMinutes) {
+        // Allow scheduling up to 15 minutes in the past (e.g. valid for "just started" meetings)
+        if (fromTime < currentMinutes - 15) {
           errors.from = "Start time cannot be in the past";
         }
       }

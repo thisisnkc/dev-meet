@@ -3,6 +3,7 @@ import moment from "moment-timezone";
 import { genRandomMeetingId, genSixDigitOtp } from "@/utlis/constants";
 import { notificationQueue } from "@/queue/notificationQueue";
 import { prisma } from "@/lib/prisma";
+import { sendMeetingInvites } from "@/lib/email";
 
 export default async function handler(
   req: NextApiRequest,
@@ -45,6 +46,7 @@ export default async function handler(
         return res.status(409).json({ message: "Booking already exists." });
       }
       const meetingId = genRandomMeetingId();
+      const meetingPin = genSixDigitOtp();
 
       const booking = await prisma.booking.create({
         data: {
@@ -57,7 +59,7 @@ export default async function handler(
           organizerId: userId,
           attendees: {
             create: attendeeEmails.map((email: string) => ({
-              meetingPin: genSixDigitOtp(),
+              meetingPin,
               email,
             })),
           },
@@ -90,17 +92,21 @@ export default async function handler(
         );
       }
 
-      // await sendMeetingInvites({
-      //   title,
-      //   date,
-      //   from,
-      //   to,
-      //   description,
-      //   organizerEmail: user.email,
-      //   attendees: attendeeEmails,
-      //   meetingId,
-      //   meetingPin,
-      // });
+      try {
+        await sendMeetingInvites({
+          title,
+          date,
+          startTime: from,
+          endTime: to,
+          description,
+          organizerEmail: user.email,
+          attendees: attendeeEmails,
+          meetingId,
+          meetingPin,
+        });
+      } catch (emailError) {
+        console.error("Failed to send meeting invites:", emailError);
+      }
 
       return res.status(201).json({ message: "Booking created", booking });
     }
