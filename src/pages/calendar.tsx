@@ -34,6 +34,7 @@ interface Meeting {
   to: string; // HH:mm
   description?: string;
   attendees: { id: string; email: string }[];
+  meetingId: string;
 }
 
 export default function CalendarPage() {
