@@ -3,24 +3,71 @@ import { PhoneOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthUser } from "@/lib/auth";
 import { useRouter } from "next/router";
+import { LeaveConfirmationDialog } from "./LeaveConfirmationDialog";
+import { MeetingEvent } from "@/utlis/constants";
 
 interface JitsiMeetingProps {
   roomName: string;
   token?: string | null;
   user?: AuthUser;
   isGuest?: boolean;
+  guestEmail?: string;
+  notifyHostEvent?: (event: MeetingEvent) => void;
 }
 
-export const JitsiMeeting = ({ roomName, token, user }: JitsiMeetingProps) => {
+interface JitsiMeetExternalAPI {
+  executeCommand?(command: string, ...args: unknown[]): void;
+  dispose?(): void;
+  on?(event: string, callback: (data: unknown) => void): void;
+}
+
+export const JitsiMeeting = ({
+  roomName,
+  token,
+  user,
+  guestEmail,
+  isGuest,
+  notifyHostEvent,
+}: JitsiMeetingProps) => {
   const router = useRouter();
   const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState("");
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const jitsiContainer = useRef<HTMLDivElement>(null);
+  const jitsiApiRef = useRef<JitsiMeetExternalAPI | null>(null);
+  const disconnectTimeoutRef = useRef<NodeJS.Timeout>();
 
-  const handleDisconnect = useCallback(() => {
-    router.push("/");
-  }, [router]);
+  useEffect(() => {
+    return () => {
+      if (disconnectTimeoutRef.current) {
+        clearTimeout(disconnectTimeoutRef.current);
+      }
+    };
+  }, []);
+  // ... (lines skipped)
+
+  const handleDisconnect = useCallback(async () => {
+    if (!isGuest) {
+      await notifyHostEvent?.(MeetingEvent.HOST_LEFT);
+      window.close();
+      //    Fallback if window.close() is blocked
+      disconnectTimeoutRef.current = setTimeout(() => {
+        router.push("/dashboard");
+      }, 500);
+    } else {
+      router.push("/meeting/ended");
+    }
+  }, [router, isGuest, notifyHostEvent]);
+
+  const confirmLeave = () => {
+    setShowLeaveDialog(false);
+    if (jitsiApiRef.current) {
+      jitsiApiRef.current.executeCommand?.("hangup");
+    } else {
+      handleDisconnect();
+    }
+  };
 
   const initializeJitsi = useCallback(() => {
     if (!jitsiContainer.current || !roomName) {
@@ -37,7 +84,7 @@ export const JitsiMeeting = ({ roomName, token, user }: JitsiMeetingProps) => {
       const domain = process.env.NEXT_PUBLIC_MEET_DOMAIN || "meet.jit.si";
       const username = user
         ? user.email
-        : `Guest-${Math.floor(1000 + Math.random() * 9000)}`;
+        : guestEmail || `Guest-${Math.floor(1000 + Math.random() * 9000)}`;
 
       const options = {
         roomName: roomName as string,
@@ -48,6 +95,38 @@ export const JitsiMeeting = ({ roomName, token, user }: JitsiMeetingProps) => {
         parentNode: document.getElementById("jitsi-container"),
         configOverwrite: {
           prejoinPageEnabled: false,
+          disableDeepLinking: true,
+          // Intercept hangup button click
+          buttonsWithNotifyClick: [{ key: "hangup", preventExecution: true }],
+          toolbarButtons: [
+            "microphone",
+            "camera",
+            "closedcaptions",
+            "desktop",
+            "fullscreen",
+            "fodeviceselection",
+            "hangup", // Native hangup enabled
+            "profile",
+            "chat",
+            "recording",
+            "livestreaming",
+            "etherpad",
+            "sharedvideo",
+            "settings",
+            "raisehand",
+            "videoquality",
+            "filmstrip",
+            "invite",
+            "feedback",
+            "stats",
+            "shortcuts",
+            "tileview",
+            "videobackgroundblur",
+            "download",
+            "help",
+            "mute-everyone",
+            "security",
+          ],
         },
         interfaceConfigOverwrite: {
           SHOW_JITSI_WATERMARK: false,
@@ -60,7 +139,11 @@ export const JitsiMeeting = ({ roomName, token, user }: JitsiMeetingProps) => {
         },
       };
 
-      const jitsiInstance = new window.JitsiMeetExternalAPI(domain, options);
+      const jitsiInstance = new window.JitsiMeetExternalAPI(
+        domain,
+        options
+      ) as JitsiMeetExternalAPI;
+      jitsiApiRef.current = jitsiInstance;
       setIsConnecting(false);
 
       // Add event listeners with optional chaining
@@ -72,9 +155,22 @@ export const JitsiMeeting = ({ roomName, token, user }: JitsiMeetingProps) => {
         setIsConnecting(false);
       });
 
-      jitsiInstance.on?.("readyToClose", () => {
-        handleDisconnect();
+      // Handle custom toolbar button clicks
+      jitsiInstance.on?.("toolbarButtonClicked", (data: unknown) => {
+        const payload = data as { key: string };
+        if (payload?.key === "hangup") {
+          setShowLeaveDialog(true);
+        }
       });
+
+      // Still listen to readyToClose as a fallback or for other triggers
+      // jitsiInstance.on?.("videoConferenceLeft", () => {
+      //   handleDisconnect();
+      // });
+
+      // jitsiInstance.on?.("readyToClose", () => {
+      //   handleDisconnect();
+      // });
 
       // Cleanup function
       return () => {
@@ -87,7 +183,7 @@ export const JitsiMeeting = ({ roomName, token, user }: JitsiMeetingProps) => {
       setError("Failed to initialize the meeting. Please try again.");
       setIsConnecting(false);
     }
-  }, [roomName, handleDisconnect, token, user]);
+  }, [roomName, token, user, guestEmail]);
 
   // Initialize Jitsi when script is loaded
   useEffect(() => {
@@ -182,8 +278,20 @@ export const JitsiMeeting = ({ roomName, token, user }: JitsiMeetingProps) => {
       {/* Show loader overlay while connecting */}
       {isConnecting && renderLoading()}
 
+      <LeaveConfirmationDialog
+        open={showLeaveDialog}
+        onOpenChange={setShowLeaveDialog}
+        onConfirm={confirmLeave}
+        title={isGuest ? "Leave Meeting?" : "End Meeting for Everyone?"}
+        description={
+          isGuest
+            ? "Are you sure you want to leave? You can rejoin later if the meeting is still active."
+            : "As the host, leaving will end the meeting for all participants. Are you sure?"
+        }
+      />
+
       {/* Always render the meeting interface so jitsiContainer ref is available */}
-      <div className="relative w-full h-screen bg-black">
+      <div className="relative w-full h-screen bg-black overflow-hidden group">
         <div
           ref={jitsiContainer}
           className="w-full h-full"

@@ -40,3 +40,20 @@ export const genJitsiTokenPayload = (email?: string, displayName?: string) => {
     room: "*",
   };
 };
+
+export enum MeetingStatus {
+  IDLE = "idle",
+  VERIFYING = "verifying",
+  WAITING_FOR_HOST = "waiting_for_host",
+  TOO_EARLY = "too_early",
+  TOO_LATE = "too_late",
+  VALID = "valid",
+  INVALID_PIN = "invalid_pin",
+  INVALID_MEETING = "invalid_meeting",
+  ERROR = "error",
+}
+
+export enum MeetingEvent {
+  HOST_JOINED = "host-joined",
+  HOST_LEFT = "host-left",
+}
