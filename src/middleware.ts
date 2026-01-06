@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // exact public paths - pages accessible without login
-  const publicExactPaths = ["/login", "/signup", "/"];
+  const publicExactPaths = ["/login", "/signup", "/", "/register"];
   if (publicExactPaths.includes(pathname)) {
     return NextResponse.next();
   }

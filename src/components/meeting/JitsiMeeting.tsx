@@ -64,7 +64,6 @@ export const JitsiMeeting = ({
     setShowLeaveDialog(false);
     if (jitsiApiRef.current) {
       jitsiApiRef.current.executeCommand?.("hangup");
-    } else {
       handleDisconnect();
     }
   };
