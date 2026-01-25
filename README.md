@@ -2,7 +2,7 @@
 
 A modern, full-stack meeting scheduling and video conferencing application built with Next.js, Prisma, and Jitsi Meet.
 
-## 🚀 Features
+## Features
 
 - **Authentication**: Secure user authentication using JWT with HTTP-only cookies.
 - **Dashboard**:
@@ -23,7 +23,7 @@ A modern, full-stack meeting scheduling and video conferencing application built
   - Profile management with avatar customization.
   - Modern, accessible form UI.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Framework**: [Next.js](https://nextjs.org/) (React)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
@@ -35,7 +35,7 @@ A modern, full-stack meeting scheduling and video conferencing application built
 - **Queue**: [BullMQ](https://bullmq.io/) & [Redis](https://redis.io/)
 - **Video**: [Jitsi Meet](https://jitsi.org/jitsi-meet/)
 
-## 🏁 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -47,7 +47,7 @@ A modern, full-stack meeting scheduling and video conferencing application built
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/dev-meet.git
+   git clone https://github.com/thisisnkc/dev-meet.git
    cd dev-meet
    ```
 
@@ -105,7 +105,7 @@ You need to run both the Next.js server and the background worker for notificati
 
 Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-## 📝 Scripts
+## Scripts
 
 - `npm run dev`: Starts the Next.js development server.
 - `npm run build`: Builds the application for production.
